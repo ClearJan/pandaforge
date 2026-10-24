@@ -25,7 +25,8 @@ echo [build] running PyInstaller (one-folder)...
     --hidden-import robotstudio.ui.main_window ^
     --hidden-import robotstudio.ui.panels ^
     --hidden-import robotstudio.ui.workers ^
-    --collect-submodules mujoco ^
+    --collect-all mujoco ^
+    --collect-all glfw ^
     src\robotstudio\launch_app.py
 if errorlevel 1 (
     echo [build] ERROR: PyInstaller failed.
