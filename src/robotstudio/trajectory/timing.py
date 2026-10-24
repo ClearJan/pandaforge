@@ -63,9 +63,14 @@ class Trajectory:
         hi = np.maximum(self.positions[0], self.positions.max(axis=0)) + 1e-9
         return lo, hi
 
-    def constraint_violation(self, dt: float = 0.002) -> tuple[float, float]:
-        """(max |v| / vmax, max |a| / amax) over a dense grid; 1.0 == at limit."""
-        ts = np.arange(0.0, self.duration + dt / 2, dt)
+    def constraint_violation(self, dt: float = 0.002, max_samples: int = 2000) -> tuple[float, float]:
+        """(max |v| / vmax, max |a| / amax) over a dense grid; 1.0 == at limit.
+
+        The grid keeps at most ``max_samples`` points (dt grows for long
+        trajectories) so cost stays bounded regardless of duration.
+        """
+        dt_eff = max(dt, self.duration / max_samples)
+        ts = np.arange(0.0, self.duration + dt_eff / 2, dt_eff)
         v = self._spline(ts, 1)
         a = self._spline(ts, 2)
         v_ratio = float(np.max(np.abs(v) / self.limits.vmax))
@@ -113,7 +118,8 @@ class TrajectoryGenerator:
         times = np.concatenate([[0.0], np.cumsum(seg_t)])
 
         scale = 1.0
-        for _ in range(self.max_scale_iterations):
+        v_ratio = a_ratio = 1.0
+        for iteration in range(self.max_scale_iterations + 1):  # at least one check
             spline = CubicSpline(times * scale, arr, bc_type="clamped", axis=0)
             traj = Trajectory(
                 times=times * scale,
@@ -125,8 +131,11 @@ class TrajectoryGenerator:
             v_ratio, a_ratio = traj.constraint_violation()
             if v_ratio <= 1.0 and a_ratio <= 1.0:
                 return traj
+            if iteration == self.max_scale_iterations:
+                break
             scale *= max(v_ratio, a_ratio) * 1.05  # grow until feasible
 
         raise TrajectoryGenerationError(
-            f"cannot satisfy joint velocity/acceleration limits (v_ratio={v_ratio:.2f}, a_ratio={a_ratio:.2f})"
+            f"cannot satisfy joint velocity/acceleration limits "
+            f"(v_ratio={v_ratio:.2f}, a_ratio={a_ratio:.2f}) after {self.max_scale_iterations} rescales"
         )

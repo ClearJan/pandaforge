@@ -211,6 +211,8 @@ class SimulationEngine:
         self._history: dict[str, list] = {k: [] for k in ("t", "ee_pos_err", "ee_rot_err", "jtrack", "arm_q")}
         self._history_cap = 4000
         self._on_estop: list[Callable[[], None]] = []
+        self._on_error: list[Callable[[str], None]] = []
+        self._last_error: str | None = None
         self._last_wall = time.perf_counter()
         self._fps_ema = 0.0
 
@@ -355,8 +357,9 @@ class SimulationEngine:
                 elif self.estop:
                     self._estop_hold()
                 viewer.sync()
-            except Exception:
+            except Exception as exc:  # keep the loop alive, but surface the error
                 log.exception("engine loop error")
+                self._report_error(f"{type(exc).__name__}: {exc}")
             # frame pacing
             next_frame += frame_budget
             now = time.perf_counter()
@@ -451,7 +454,7 @@ class SimulationEngine:
             self._gripper_target = self.robot.gripper_ctrl_from_opening(cmd.opening)
         elif isinstance(cmd, SetControllerCmd):
             self._controller = cmd.controller
-            self._controller_status = getattr(cmd.controller, "status_text", "controller active") if cmd.controller else "idle"
+            self._controller_status = "controller active" if cmd.controller else "idle"
             self.estop = False
         elif isinstance(cmd, PauseCmd):
             self.paused = cmd.paused
@@ -494,7 +497,17 @@ class SimulationEngine:
     # external API (any thread)
     # ------------------------------------------------------------------ #
     def set_joints(self, arm_q, gripper_opening: float | None = None) -> None:
-        self.submit(SetJointsCmd(arm_q=np.asarray(arm_q, dtype=float), gripper_opening=gripper_opening))
+        arm_q = np.asarray(arm_q, dtype=float)
+        if arm_q.shape != (self.robot.n_arm,):
+            raise ValueError(f"arm_q must have shape ({self.robot.n_arm},), got {arm_q.shape}")
+        if not self.robot.within_limits(arm_q):
+            bad = [
+                (i + 1, float(q), (float(lo), float(hi)))
+                for i, (q, (lo, hi)) in enumerate(zip(arm_q, self.robot.jnt_range))
+                if not (lo <= q <= hi)
+            ]
+            raise ValueError(f"joint targets outside limits (units: radians): {bad}")
+        self.submit(SetJointsCmd(arm_q=arm_q, gripper_opening=gripper_opening))
 
     def set_gripper(self, opening: float) -> None:
         self.submit(SetGripperCmd(opening=float(opening)))
@@ -517,6 +530,22 @@ class SimulationEngine:
     def on_estop(self, callback: Callable[[], None]) -> None:
         self._on_estop.append(callback)
 
+    def on_error(self, callback: Callable[[str], None]) -> None:
+        """Register a callback invoked (from the engine thread) on runtime errors."""
+        self._on_error.append(callback)
+
+    def _report_error(self, message: str) -> None:
+        self._last_error = message
+        for cb in self._on_error:
+            try:
+                cb(message)
+            except Exception:
+                log.exception("error callback failed")
+
+    @property
+    def last_error(self) -> str | None:
+        return self._last_error
+
     def current_scene_spec(self) -> SceneSpec:
         with self._lock:
             return self._scene_spec
@@ -529,6 +558,9 @@ class SimulationEngine:
     def snapshot(self) -> SimSnapshot:
         with self._lock:
             d = self.data
+            # live controller status (changes every step during execution)
+            if self._controller is not None and hasattr(self._controller, "status_text"):
+                self._controller_status = str(self._controller.status_text)
             qpos = d.qpos.copy()
             ctrl = d.ctrl.copy()
             arm_q = self.robot.arm_q_from_qpos(qpos)
@@ -565,7 +597,7 @@ class SimulationEngine:
 
     def _count_grasp_contacts(self) -> int:
         """Contacts between finger geoms and the cube (grasp evidence)."""
-        m, d = self.model
+        m, d = self.model, self.data
         try:
             cube_gid = int(m.geom("cube_geom").id)
         except KeyError:
