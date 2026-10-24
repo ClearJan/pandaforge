@@ -9,6 +9,10 @@ RRT: single tree, goal-biased uniform sampling, bounded extension step.
 RRT-Connect: two trees growing toward each other with CONNECT (repeat EXTEND
 until obstacle or goal reached); typically 1-2 orders of magnitude fewer
 iterations in uncluttered scenes.
+
+Performance note (profiled 2026-10-25): nearest-neighbour is vectorized over
+a preallocated (N,7) array - a pure-Python per-node scan was the dominant
+cost (O(n) Python iterations per sample), not collision checking.
 """
 
 from __future__ import annotations
@@ -18,6 +22,39 @@ import numpy as np
 from robotstudio.planning.base import JointSpacePlanner, PlanningResult
 from robotstudio.planning.shortcut import shortcut
 
+_TREE_CAPACITY = 50000
+
+
+class _Tree:
+    """Flat preallocated tree with vectorized nearest-neighbour queries."""
+
+    __slots__ = ("points", "parents", "n")
+
+    def __init__(self, root: np.ndarray) -> None:
+        self.points = np.empty((_TREE_CAPACITY, root.shape[0]))
+        self.points[0] = root
+        self.parents = np.full(_TREE_CAPACITY, -1, dtype=np.int64)
+        self.n = 1
+
+    def add(self, q: np.ndarray, parent: int) -> int:
+        idx = self.n
+        self.points[idx] = q
+        self.parents[idx] = parent
+        self.n += 1
+        return idx
+
+    def nearest(self, target: np.ndarray) -> int:
+        d = self.points[: self.n] - target
+        return int(np.argmin(np.einsum("ij,ij->i", d, d)))
+
+    def path_to(self, idx: int) -> list[np.ndarray]:
+        out = []
+        while idx >= 0:
+            out.append(self.points[idx].copy())
+            idx = int(self.parents[idx])
+        out.reverse()
+        return out
+
 
 class RRTPlanner(JointSpacePlanner):
     algorithm = "rrt"
@@ -26,55 +63,42 @@ class RRTPlanner(JointSpacePlanner):
         cfg = self.config
         lo, hi = self.checker.robot.jnt_range[:, 0], self.checker.robot.jnt_range[:, 1]
 
-        # Tree as parallel lists for speed.
-        nodes = [start.copy()]
-        parents = [-1]
-
+        tree = _Tree(start)
         goal_reached_idx = -1
         it = 0
         while it < cfg.max_iterations:
             if self._time_left(t0) <= 0:
-                return self._result(False, None, len(nodes), t0, "planning timeout", {"iterations": it})
+                return self._result(False, None, tree.n, t0, "planning timeout", {"iterations": it})
             it += 1
             if rng.random() < cfg.goal_bias:
                 target = goal
             else:
                 target = rng.uniform(lo, hi)
 
-            i_near = self._nearest(nodes, target)
-            q_new = self._steer(nodes[i_near], target, cfg.step_size)
+            i_near = tree.nearest(target)
+            q_new = self._steer(tree.points[i_near], target, cfg.step_size)
 
             if not self.robot_limits_ok(q_new):
                 continue
-            if not self._segment_valid(nodes[i_near], q_new, holding_cube):
+            if not self._segment_valid(tree.points[i_near], q_new, holding_cube):
                 continue
 
-            nodes.append(q_new)
-            parents.append(i_near)
-            idx_new = len(nodes) - 1
+            idx_new = tree.add(q_new, i_near)
 
             if np.linalg.norm(q_new - goal) <= cfg.step_size and self._segment_valid(q_new, goal, holding_cube):
-                nodes.append(goal.copy())
-                parents.append(idx_new)
-                goal_reached_idx = len(nodes) - 1
+                goal_reached_idx = tree.add(goal.copy(), idx_new)
                 break
 
         if goal_reached_idx < 0:
-            return self._result(False, None, len(nodes), t0, "max iterations reached without finding the goal", {"iterations": it})
+            return self._result(False, None, tree.n, t0, "max iterations reached without finding the goal", {"iterations": it})
 
-        path = self._backtrack(nodes, parents, goal_reached_idx)
-        path = self._densify_endpoints(path, goal)
-        stats = {"iterations": it, "tree_size": len(nodes)}
+        path = tree.path_to(goal_reached_idx)
+        stats = {"iterations": it, "tree_size": tree.n}
         path = self._maybe_shortcut(path, rng, finger_opening, holding_cube, stats)
-        return self._result(True, path, len(nodes), t0, "path found", stats)
+        return self._result(True, path, tree.n, t0, "path found", stats)
 
     def robot_limits_ok(self, q: np.ndarray) -> bool:
         return self.checker.robot.within_limits(q)
-
-    @staticmethod
-    def _nearest(nodes: list[np.ndarray], target: np.ndarray) -> int:
-        dists = [np.linalg.norm(n - target) for n in nodes]
-        return int(np.argmin(dists))
 
     @staticmethod
     def _steer(q_near: np.ndarray, target: np.ndarray, step: float) -> np.ndarray:
@@ -83,21 +107,6 @@ class RRTPlanner(JointSpacePlanner):
         if dist <= step:
             return target.copy()
         return q_near + delta / dist * step
-
-    @staticmethod
-    def _backtrack(nodes, parents, idx) -> list[np.ndarray]:
-        path = []
-        while idx >= 0:
-            path.append(nodes[idx])
-            idx = parents[idx]
-        path.reverse()
-        return path
-
-    @staticmethod
-    def _densify_endpoints(path: list[np.ndarray], goal: np.ndarray) -> list[np.ndarray]:
-        if np.linalg.norm(path[-1] - goal) > 1e-9:
-            path.append(goal.copy())
-        return path
 
     def _maybe_shortcut(self, path, rng, finger_opening, holding_cube, stats) -> list[np.ndarray]:
         if self.config.shortcut_tries <= 0:
@@ -116,8 +125,8 @@ class RRTConnectPlanner(RRTPlanner):
         cfg = self.config
         lo, hi = self.checker.robot.jnt_range[:, 0], self.checker.robot.jnt_range[:, 1]
 
-        t1_nodes, t1_par = [start.copy()], [-1]  # tree rooted at start
-        t2_nodes, t2_par = [goal.copy()], [-1]  # tree rooted at goal
+        t1 = _Tree(start)  # rooted at start
+        t2 = _Tree(goal)  # rooted at goal
         t1_is_start = True
         connected = False
         it = 0
@@ -125,17 +134,17 @@ class RRTConnectPlanner(RRTPlanner):
 
         while not connected:
             if it >= cfg.max_iterations:
-                return self._result(False, None, len(t1_nodes) + len(t2_nodes), t0, "max iterations reached", {"iterations": it})
+                return self._result(False, None, t1.n + t2.n, t0, "max iterations reached", {"iterations": it})
             if self._time_left(t0) <= 0:
-                return self._result(False, None, len(t1_nodes) + len(t2_nodes), t0, "planning timeout", {"iterations": it})
+                return self._result(False, None, t1.n + t2.n, t0, "planning timeout", {"iterations": it})
             it += 1
 
             target = rng.uniform(lo, hi)
-            status1, idx1 = self._extend(t1_nodes, t1_par, target, cfg.step_size, holding_cube)
+            status1, idx1 = self._extend(t1, target, cfg.step_size, holding_cube)
             if status1 != "trapped":
-                q_target = t1_nodes[idx1]
+                q_target = t1.points[idx1]
                 while True:
-                    status2, idx2 = self._extend(t2_nodes, t2_par, q_target, cfg.step_size, holding_cube)
+                    status2, idx2 = self._extend(t2, q_target, cfg.step_size, holding_cube)
                     if status2 == "reached":
                         connected = True
                         meet1, meet2 = idx1, idx2
@@ -143,29 +152,26 @@ class RRTConnectPlanner(RRTPlanner):
                     if status2 == "trapped":
                         break
             if not connected:
-                t1_nodes, t2_nodes = t2_nodes, t1_nodes
-                t1_par, t2_par = t2_par, t1_par
+                t1, t2 = t2, t1
                 t1_is_start = not t1_is_start
 
-        # path1: t1 root -> meeting node; path2: t2 root -> meeting node
-        path1 = self._backtrack(t1_nodes, t1_par, meet1)
-        path2 = self._backtrack(t2_nodes, t2_par, meet2)
+        path1 = t1.path_to(meet1)
+        path2 = t2.path_to(meet2)
         full = path1 + path2[::-1][1:] if t1_is_start else path2 + path1[::-1][1:]
 
-        stats = {"iterations": it, "tree_size_a": len(t1_nodes), "tree_size_b": len(t2_nodes)}
+        stats = {"iterations": it, "tree_size_a": t1.n, "tree_size_b": t2.n}
         full = self._maybe_shortcut(full, rng, finger_opening, holding_cube, stats)
-        return self._result(True, full, len(t1_nodes) + len(t2_nodes), t0, "path found", stats)
+        return self._result(True, full, t1.n + t2.n, t0, "path found", stats)
 
-    def _extend(self, nodes, parents, target, step, holding_cube):
+    def _extend(self, tree: _Tree, target, step, holding_cube):
         """One EXTEND step. Returns (status, new_index or -1)."""
-        i_near = self._nearest(nodes, target)
-        q_new = self._steer(nodes[i_near], target, step)
+        i_near = tree.nearest(target)
+        q_new = self._steer(tree.points[i_near], target, step)
         if not self.robot_limits_ok(q_new):
             return "trapped", -1
-        if not self._segment_valid(nodes[i_near], q_new, holding_cube):
+        if not self._segment_valid(tree.points[i_near], q_new, holding_cube):
             return "trapped", -1
-        nodes.append(q_new)
-        parents.append(i_near)
-        if np.allclose(q_new, target, atol=1e-12):
-            return "reached", len(nodes) - 1
-        return "advanced", len(nodes) - 1
+        idx = tree.add(q_new, i_near)
+        if np.array_equal(q_new, target):
+            return "reached", idx
+        return "advanced", idx

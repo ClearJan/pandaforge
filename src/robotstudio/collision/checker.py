@@ -52,37 +52,37 @@ class CollisionChecker:
         self.model = model
         self.robot = robot
         self.data = mujoco.MjData(model)
-        # Explicit whitelist of allowed contact pairs, by BODY name.
-        # Finger pads pressing the grasp cube is the grasp itself;
-        # finger-finger contact occurs at full closure around an object.
-        self.allowed_body_pairs: set[frozenset[str]] = {
+        # Explicit whitelist of allowed contact pairs, by BODY name, per mode.
+        # - grasp pairs: the fingers/palm pressing the cube IS the grasp -> only
+        #   legal while actually holding it (holding_cube=True).
+        # - rest pairs: the cube resting on table/floor is a normal physical
+        #   contact -> only legal while NOT holding it.
+        self.grasp_body_pairs: set[frozenset[str]] = {
             frozenset(("left_finger", "cube")),
             frozenset(("right_finger", "cube")),
-            frozenset(("hand", "cube")),  # palm contact during squeeze
+            frozenset(("hand", "cube")),
             frozenset(("left_finger", "right_finger")),
         }
+        self.rest_body_pairs: set[frozenset[str]] = {
+            frozenset(("cube", "table")),
+            frozenset(("cube", "table_legs")),
+            frozenset(("cube", "world")),  # floor plane lives in the world body
+        }
+        # Extra user-supplied allowances (tests / special scenes).
+        self.extra_allowed_pairs: set[frozenset[str]] = set()
         # Cached geom ids grouped by body id.
         self._body_of_geom = np.asarray(model.geom_bodyid).copy()
-        self._geom_env_ids = self._collect_env_geoms()
 
     # ------------------------------------------------------------------ #
-    def _collect_env_geoms(self) -> set[int]:
-        """Geoms belonging to static environment bodies (table, obstacles, floor)."""
-        env: set[int] = set()
-        for name in ("floor", "table", "table_legs"):
-            try:
-                bid = int(self.model.body(name).id)
-            except KeyError:
-                continue
-            start = int(self.model.body_geomadr[bid])
-            env.update(range(start, start + int(self.model.body_geomnum[bid])))
-        return env
-
     def set_allowed(self, pairs: list[tuple[str, str]]) -> None:
-        """Replace the whitelist (used by tests to build ground-truth scenes)."""
-        self.allowed_body_pairs = {frozenset(p) for p in pairs}
+        """Extend the whitelist (used by tests to build ground-truth scenes)."""
+        self.extra_allowed_pairs |= {frozenset(p) for p in pairs}
 
     # ------------------------------------------------------------------ #
+    def pair_is_allowed(self, g1: int, g2: int, holding_cube: bool) -> bool:
+        """Public predicate (used by parity tests and diagnostics)."""
+        return self._pair_allowed(g1, g2, holding_cube)
+
     def _body_name(self, gid: int) -> str:
         bid = int(self._body_of_geom[gid])
         return str(mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, bid))
@@ -90,8 +90,12 @@ class CollisionChecker:
     def _pair_allowed(self, g1: int, g2: int, holding_cube: bool) -> bool:
         b1, b2 = self._body_name(g1), self._body_name(g2)
         pair = frozenset((b1, b2))
-        if pair in self.allowed_body_pairs:
+        if pair in self.extra_allowed_pairs:
             return True
+        if pair in self.grasp_body_pairs:
+            return holding_cube
+        if pair in self.rest_body_pairs:
+            return not holding_cube
         return False
 
     def _check_single(self, arm_q: np.ndarray, finger_opening: float, holding_cube: bool) -> list[tuple[str, str, float]]:
