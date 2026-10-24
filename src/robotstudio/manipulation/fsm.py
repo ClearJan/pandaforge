@@ -30,7 +30,6 @@ budgets are bounded (see GraspTaskConfig).
 from __future__ import annotations
 
 import enum
-import time
 from dataclasses import dataclass, field
 
 import mujoco

@@ -79,7 +79,6 @@ def test_joint_command_flow(window):
 
 
 def test_ik_flow_via_panel(window):
-    from robotstudio.kinematics.pose import Pose
 
     snap = window.engine.snapshot()
     # a reachable pose: 10 cm in front of the current EE

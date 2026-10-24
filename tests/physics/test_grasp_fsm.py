@@ -12,8 +12,13 @@ import time
 import numpy as np
 import pytest
 
-from robotstudio.config import PandaSpec
-from robotstudio.manipulation.fsm import GraspFSM, GraspState, GraspTaskConfig, TERMINAL_FAIL, TERMINAL_OK
+from robotstudio.manipulation.fsm import (
+    TERMINAL_FAIL,
+    TERMINAL_OK,
+    GraspFSM,
+    GraspState,
+    GraspTaskConfig,
+)
 from robotstudio.simulation.engine import SimulationEngine
 
 

@@ -5,12 +5,12 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
+from robotstudio.config import PandaSpec
 from robotstudio.trajectory.timing import (
     TrajectoryGenerationError,
     TrajectoryGenerator,
     TrajectoryLimits,
 )
-from robotstudio.config import PandaSpec
 
 
 def _random_path(rng, n=8, max_step=0.25):

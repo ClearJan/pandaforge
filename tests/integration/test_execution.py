@@ -10,12 +10,12 @@ import time
 
 import numpy as np
 import pytest
+from scipy.interpolate import CubicSpline
 
 from robotstudio.config import PandaSpec
-from robotstudio.planning.base import PlannerConfig
 from robotstudio.control.executor import InfeasibleTrajectoryError, TrajectoryExecutor
+from robotstudio.planning.base import PlannerConfig
 from robotstudio.trajectory.timing import Trajectory, TrajectoryGenerator, TrajectoryLimits
-from scipy.interpolate import CubicSpline
 
 
 @pytest.fixture()
@@ -91,7 +91,6 @@ def test_infeasible_trajectory_is_refused(engine):
     t = np.array([0.0, 0.01])  # 2 rad in 10 ms -> absurd velocity
     positions = np.array([np.zeros(7), np.full(7, 2.0)])
     spline = CubicSpline(t, positions, bc_type="clamped", axis=0)
-    from robotstudio.trajectory.timing import TrajectoryLimits
 
     bad = Trajectory(times=t, positions=positions, duration=0.01, limits=TrajectoryLimits.from_panda(), _spline=spline)
     with pytest.raises(InfeasibleTrajectoryError):

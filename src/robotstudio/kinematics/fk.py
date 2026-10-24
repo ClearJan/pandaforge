@@ -10,8 +10,8 @@ from __future__ import annotations
 import mujoco
 import numpy as np
 
-from robotstudio.robots.panda import PandaRobot
 from robotstudio.kinematics.pose import Pose
+from robotstudio.robots.panda import PandaRobot
 
 
 def apply_arm_q(data: mujoco.MjData, robot: PandaRobot, arm_q: np.ndarray, finger_opening: float = 0.04) -> None:

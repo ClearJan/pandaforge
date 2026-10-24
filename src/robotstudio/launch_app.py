@@ -19,9 +19,9 @@ def main() -> int:
 
         import numpy as np
 
+        from robotstudio.collision.checker import CollisionChecker
         from robotstudio.config import PandaSpec
         from robotstudio.control.executor import TrajectoryExecutor
-        from robotstudio.collision.checker import CollisionChecker
         from robotstudio.planning.base import PlannerConfig
         from robotstudio.planning.rrt import RRTConnectPlanner
         from robotstudio.simulation.engine import SimulationEngine

@@ -12,12 +12,10 @@ from __future__ import annotations
 
 import mujoco
 import numpy as np
-import pytest
 
 from robotstudio.config import PandaSpec
 from robotstudio.kinematics.fk import body_jacobian, forward_kinematics
 from robotstudio.kinematics.pose import Pose, mat_to_quat, quat_to_mat, so3_error
-from robotstudio.kinematics.ik import IKSolver
 
 RNG = np.random.default_rng(2028)
 
@@ -56,8 +54,7 @@ def test_so3_error_small_rotation():
 
 def test_so3_error_near_pi():
     R = quat_to_mat(np.array([0.0, 1.0, 0.0, 0.0]))  # 180 deg about x
-    I = np.eye(3)
-    err = so3_error(R, I)
+    err = so3_error(R, np.eye(3))
     assert np.isclose(np.linalg.norm(err), np.pi, atol=1e-5)
 
 

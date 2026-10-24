@@ -46,9 +46,8 @@ def render_scene(out: Path, cam_pos=(1.35, -1.35, 1.15), lookat=(0.35, -0.05, 0.
 def render_execution(out: Path) -> None:
     """Mid-trajectory frame: the arm executing a planned motion."""
     from robotstudio.collision.checker import CollisionChecker
-    from robotstudio.control.executor import TrajectoryExecutor
-    from robotstudio.planning.rrt import RRTConnectPlanner
     from robotstudio.planning.base import PlannerConfig
+    from robotstudio.planning.rrt import RRTConnectPlanner
     from robotstudio.trajectory.timing import TrajectoryGenerator
 
     path = write_scene_file(preset_scenes()["single_obs"])

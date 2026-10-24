@@ -16,7 +16,6 @@ from __future__ import annotations
 import csv
 import json
 import time
-from pathlib import Path
 
 import numpy as np
 
@@ -96,12 +95,12 @@ def run_grasp_benchmark(base_runs: int = 20, jitter_runs: int = 10, hard_runs: i
         return row
 
     rng = np.random.default_rng(seed)
-    for i in range(base_runs):
+    for _ in range(base_runs):
         one_trial("base", (0.55, 0.0), (0.55, -0.30), expect_fail=False)
-    for i in range(jitter_runs):
+    for _ in range(jitter_runs):
         cube = (0.55 + rng.uniform(-0.03, 0.03), rng.uniform(-0.03, 0.03))
         one_trial("jitter", cube, (0.55, -0.30), expect_fail=False)
-    for i in range(hard_runs):
+    for _ in range(hard_runs):
         # near the table edges (table spans x 0.20..0.90, y -0.45..0.45),
         # kept >=5 cm inside the edges and inside the practical workspace
         x = rng.uniform(0.26, 0.84)

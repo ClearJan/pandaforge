@@ -78,7 +78,7 @@ class IKSolver:
         target: Pose,
         q_init: np.ndarray | None = None,
         n_restarts: int = 8,
-        validate: "callable | None" = None,
+        validate: callable | None = None,
     ) -> IKResult:
         """Solve IK for ``target``.
 

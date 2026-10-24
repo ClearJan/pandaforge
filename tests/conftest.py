@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import mujoco
-import numpy as np
 import pytest
 
 from robotstudio.collision.checker import CollisionChecker

@@ -22,7 +22,7 @@ def main(argv: list[str] | None = None) -> int:
 
     from robotstudio.simulation.engine import SimulationEngine
     from robotstudio.ui.main_window import MainWindow
-    from robotstudio.utils.logging import add_file_handler, get_logger
+    from robotstudio.utils.logging import get_logger
 
     log = get_logger("app")
     log.info("RobotStudio starting (scene=%s)", scene)

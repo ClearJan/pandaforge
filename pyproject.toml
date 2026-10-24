@@ -47,4 +47,18 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "B"]
-ignore = ["E501"]
+ignore = [
+    "E501",
+    # zip() inputs are equal-length by construction throughout the codebase
+    "B905",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Math notation uses uppercase symbols (R, T1, E, ...) by convention.
+"src/robotstudio/kinematics/*" = ["N802", "N803", "N806"]
+"src/robotstudio/planning/rrt.py" = ["N806"]
+"src/robotstudio/collision/checker.py" = ["N806"]
+"src/robotstudio/manipulation/fsm.py" = ["N806"]
+"tests/*" = ["N802", "N803", "N806"]
+# Qt overrides use Qt's camelCase names.
+"src/robotstudio/ui/*" = ["N802"]

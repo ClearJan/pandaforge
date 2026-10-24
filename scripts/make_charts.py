@@ -7,8 +7,6 @@ from __future__ import annotations
 
 import csv
 import json
-from collections import defaultdict
-from pathlib import Path
 
 import matplotlib
 
@@ -84,13 +82,7 @@ def chart_planning_times() -> None:
     ax.set_yscale("log")
     ax.set_ylabel("planning time [s] (successful runs)")
     ticks, tick_labels = [], []
-    seen = set()
-    for pos_, lab in zip(positions, labels):
-        if lab not in seen:
-            pass
-    # group labels per scenario
     for i, s in enumerate(scenarios):
-        center = positions[i * 3 + 1] if i * 3 + 1 < len(positions) else positions[-1]
         ticks.append((positions[i * 3] + positions[min(i * 3 + 2, len(positions) - 1)]) / 2)
         tick_labels.append(SCENARIO_LABELS[s])
     ax.set_xticks(ticks)

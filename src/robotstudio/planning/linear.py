@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from robotstudio.planning.base import JointSpacePlanner, PlanningResult, path_length
+from robotstudio.planning.base import JointSpacePlanner, PlanningResult
 
 
 class LinearPlanner(JointSpacePlanner):

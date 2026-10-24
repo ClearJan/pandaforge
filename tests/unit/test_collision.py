@@ -16,11 +16,8 @@ import numpy as np
 
 from robotstudio.collision.checker import CollisionChecker
 from robotstudio.config import PandaSpec
-from robotstudio.kinematics.fk import forward_kinematics
-from robotstudio.kinematics.pose import Pose
 from robotstudio.kinematics.ik import IKSolver
-
-from robotstudio.simulation.scenes import preset_scenes, write_scene_file
+from robotstudio.kinematics.pose import Pose
 
 
 def _make_checker(model, robot):

@@ -26,8 +26,9 @@ from __future__ import annotations
 import queue
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable, Protocol
+from typing import Protocol
 
 import mujoco
 import numpy as np
@@ -44,6 +45,9 @@ from robotstudio.utils.logging import get_logger
 
 log = get_logger("engine")
 
+# z position used to park disabled scene bodies far below the floor
+_HIDDEN_Z = -5.0
+
 
 # --------------------------------------------------------------------------- #
 # controllers
@@ -53,18 +57,18 @@ log = get_logger("engine")
 class Controller(Protocol):
     """A controller produces arm joint targets (7,) every physics step."""
 
-    def update(self, ctx: "EngineContext", dt: float) -> np.ndarray | None:
+    def update(self, ctx: EngineContext, dt: float) -> np.ndarray | None:
         """Return arm ctrl targets, or None to keep the last targets."""
         ...
 
-    def on_finish(self, ctx: "EngineContext") -> None: ...
+    def on_finish(self, ctx: EngineContext) -> None: ...
 
 
 @dataclass
 class EngineContext:
     """Read/write facade handed to controllers each step (engine thread only)."""
 
-    engine: "SimulationEngine"
+    engine: SimulationEngine
 
     @property
     def time(self) -> float:
@@ -237,8 +241,6 @@ class SimulationEngine:
     def _apply_scene_to_model(self, spec: SceneSpec) -> None:
         """Toggle table/obstacles in-place so the viewer never reloads."""
         m, d = self.model, self.data
-        HIDDEN_Z = -5.0
-
         # --- table ---
         table_body = m.body("table")
         if spec.table.enabled:
@@ -250,10 +252,10 @@ class SimulationEngine:
             legs.pos[:] = [spec.table.center[0], spec.table.center[1], (top_z - spec.table.thickness) / 2.0]
             self._set_geom_enabled_by_body(legs.id, True)
         else:
-            table_body.pos[:] = [0, 0, HIDDEN_Z]
+            table_body.pos[:] = [0, 0, _HIDDEN_Z]
             self._set_geom_enabled_by_body(table_body.id, False)
             legs = m.body("table_legs")
-            legs.pos[:] = [0, 0, HIDDEN_Z]
+            legs.pos[:] = [0, 0, _HIDDEN_Z]
             self._set_geom_enabled_by_body(legs.id, False)
 
         # --- obstacles: names present in the model but missing from spec are hidden ---
@@ -268,7 +270,7 @@ class SimulationEngine:
                 m.body(name).quat[:] = o.quat
                 self._set_geom_enabled_by_body(body_id, True)
             else:
-                m.body(name).pos[:] = [0, 0, HIDDEN_Z]
+                m.body(name).pos[:] = [0, 0, _HIDDEN_Z]
                 self._set_geom_enabled_by_body(body_id, False)
 
         # --- cube ---
@@ -284,7 +286,7 @@ class SimulationEngine:
             d.qvel[cube_vadr : cube_vadr + 6] = 0
             self._set_geom_enabled_by_body(cube_bid, True)
         else:
-            d.qpos[cube_jadr : cube_jadr + 3] = [0, 0, HIDDEN_Z]
+            d.qpos[cube_jadr : cube_jadr + 3] = [0, 0, _HIDDEN_Z]
             self._set_geom_enabled_by_body(cube_bid, False)
 
         # --- place target (mocap) ---
@@ -295,7 +297,7 @@ class SimulationEngine:
                 surf = spec.table.top_height if spec.table.enabled else 0.0
                 d.mocap_pos[mocap_id] = [x, y, surf]
             elif mocap_id >= 0:
-                d.mocap_pos[mocap_id] = [0, 0, HIDDEN_Z]
+                d.mocap_pos[mocap_id] = [0, 0, _HIDDEN_Z]
         except (KeyError, IndexError):
             pass
 
@@ -563,7 +565,6 @@ class SimulationEngine:
                 self._controller_status = str(self._controller.status_text)
             qpos = d.qpos.copy()
             ctrl = d.ctrl.copy()
-            arm_q = self.robot.arm_q_from_qpos(qpos)
             ee_pos = d.body(self.robot.ee_body_id).xpos.copy()
             ee_quat = d.body(self.robot.ee_body_id).xquat.copy()
             cube_bid = self._cube_body_name_map.get("cube")

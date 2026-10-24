@@ -9,12 +9,10 @@ from __future__ import annotations
 import numpy as np
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QDoubleSpinBox,
     QFormLayout,
     QGridLayout,
-    QGroupBox,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -444,7 +442,7 @@ class ScenePanel(QWidget):
         form = QFormLayout(self)
 
         self.scene_combo = QComboBox()
-        for name, spec in presets.items():
+        for name in presets:
             self.scene_combo.addItem(name)
         load_btn = QPushButton("Load preset")
         load_btn.clicked.connect(self._emit_preset)
@@ -483,7 +481,6 @@ class ScenePanel(QWidget):
         obs = [o for o in spec.obstacles if o.enabled]
         self.obstacle_table.setRowCount(len(obs))
         for i, o in enumerate(obs):
-            size = getattr(o, "size", None) or getattr(o, "radius", 0) or (o.radius, o.half_length)
             if o.kind == "box":
                 size_str = "x".join(f"{v:.3f}" for v in o.size)
             elif o.kind == "sphere":
@@ -501,9 +498,7 @@ class ScenePanel(QWidget):
         if self._current_spec is None:
             return
         # NOTE: obstacle table editing is applied to a copy of the spec
-        from dataclasses import replace
 
-        import numpy as np
 
         spec = self._current_spec
         for i in range(self.obstacle_table.rowCount()):

@@ -11,8 +11,8 @@ from PySide6.QtCore import QThread, Signal
 
 from robotstudio.kinematics.ik import IKSolver
 from robotstudio.kinematics.pose import Pose
-from robotstudio.planning.base import JointSpacePlanner, PlanningResult
-from robotstudio.trajectory.timing import Trajectory, TrajectoryGenerator
+from robotstudio.planning.base import JointSpacePlanner
+from robotstudio.trajectory.timing import TrajectoryGenerator
 from robotstudio.utils.logging import get_logger
 
 log = get_logger("ui.worker")

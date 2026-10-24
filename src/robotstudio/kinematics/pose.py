@@ -23,7 +23,7 @@ class Pose:
     quat_wxyz: np.ndarray  # (4,)
 
     @staticmethod
-    def make(pos, quat_wxyz=None) -> "Pose":
+    def make(pos, quat_wxyz=None) -> Pose:
         pos = np.asarray(pos, dtype=float).reshape(3)
         if quat_wxyz is None:
             quat_wxyz = np.array([1.0, 0.0, 0.0, 0.0])
@@ -32,7 +32,7 @@ class Pose:
         return Pose(pos=pos, quat_wxyz=quat_wxyz)
 
     @staticmethod
-    def from_matrix(matrix: np.ndarray) -> "Pose":
+    def from_matrix(matrix: np.ndarray) -> Pose:
         m = np.asarray(matrix, dtype=float).reshape(4, 4)
         return Pose.make(m[:3, 3], mat_to_quat(m[:3, :3]))
 
@@ -43,7 +43,7 @@ class Pose:
         m[:3, 3] = self.pos
         return m
 
-    def inverse(self) -> "Pose":
+    def inverse(self) -> Pose:
         R = quat_to_mat(self.quat_wxyz)
         return Pose.make(-(R.T @ self.pos), mat_to_quat(R.T))
 

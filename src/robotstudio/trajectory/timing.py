@@ -32,7 +32,7 @@ class TrajectoryLimits:
     amax: np.ndarray  # (7,) rad/s^2
 
     @staticmethod
-    def from_panda() -> "TrajectoryLimits":
+    def from_panda() -> TrajectoryLimits:
         from robotstudio.config import PandaSpec
 
         return TrajectoryLimits(

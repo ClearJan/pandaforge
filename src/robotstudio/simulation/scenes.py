@@ -95,7 +95,7 @@ class SceneSpec:
         return d
 
     @staticmethod
-    def from_dict(d: dict) -> "SceneSpec":
+    def from_dict(d: dict) -> SceneSpec:
         table = TableSpec(**d.get("table", {}))
         obstacles = []
         for o in d.get("obstacles", []):

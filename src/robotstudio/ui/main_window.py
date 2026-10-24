@@ -8,7 +8,6 @@ from PySide6.QtGui import QTextCursor
 from PySide6.QtWidgets import (
     QApplication,
     QDockWidget,
-    QFileDialog,
     QLabel,
     QMainWindow,
     QMessageBox,
@@ -17,17 +16,22 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-import mujoco
-
 from robotstudio.config import PandaSpec
 from robotstudio.control.executor import TrajectoryExecutor
 from robotstudio.kinematics.pose import Pose
-from robotstudio.manipulation.fsm import GraspFSM, GraspState, GraspTaskConfig, TERMINAL_FAIL
+from robotstudio.manipulation.fsm import GraspFSM, GraspState, GraspTaskConfig
 from robotstudio.planning.base import PlannerConfig
 from robotstudio.planning.linear import LinearPlanner
 from robotstudio.planning.rrt import RRTConnectPlanner, RRTPlanner
 from robotstudio.simulation.scenes import load_scene_json, preset_scenes, save_scene_json
-from robotstudio.ui.panels import GraspPanel, IKPanel, JointControlPanel, MetricsPanel, PlanningPanel, ScenePanel
+from robotstudio.ui.panels import (
+    GraspPanel,
+    IKPanel,
+    JointControlPanel,
+    MetricsPanel,
+    PlanningPanel,
+    ScenePanel,
+)
 from robotstudio.ui.style import DARK_QSS
 from robotstudio.ui.workers import IKWorker, PlanWorker, TrajectoryWorker
 from robotstudio.utils.logging import get_logger
