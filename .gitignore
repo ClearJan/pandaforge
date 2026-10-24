@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+*.egg
+
+# Caches & temp
+.cache/
+.pytest_cache/
+.ruff_cache/
+logs/
+*.log
+
+# Build artifacts
+build/
+dist/RobotStudio/
+dist/*.zip
+*.spec.bak
+
+# Reports raw data kept, but large temp exports ignored
+reports/tmp/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store

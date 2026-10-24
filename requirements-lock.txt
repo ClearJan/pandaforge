@@ -1,0 +1,12 @@
+# Locked dependency versions (verified on Windows 11, Python 3.11.9, 2026-10-25)
+mujoco==3.17.0
+numpy==2.4.6
+scipy==1.17.1
+PySide6-Essentials==6.12.0
+pyqtgraph==0.14.0
+matplotlib==3.11.2
+pytest==9.1.1
+pytest-timeout==2.4.0
+# dev/release extras
+ruff==0.14.4
+pyinstaller==6.19.0
