@@ -98,6 +98,11 @@ class MainWindow(QMainWindow):
         self._timer.start()
 
         self.engine.on_error(self._on_engine_error)
+        # sync the scene panel with the engine's actual starting scene
+        current = self.engine.current_scene_spec()
+        idx = list(preset_scenes().keys()).index(current.name) if current.name in preset_scenes() else 0
+        self.scene_panel.scene_combo.setCurrentIndex(idx)
+        self.scene_panel.show_spec(current)
         self._refresh()
 
     # ------------------------------------------------------------------ #

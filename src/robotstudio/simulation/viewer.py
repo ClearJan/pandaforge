@@ -8,6 +8,7 @@ are toggled in-place (body pose + geom contype), so the window stays open.
 from __future__ import annotations
 
 import mujoco
+import mujoco.viewer  # NOT auto-imported by `import mujoco` (lazy submodule)
 import numpy as np
 
 from robotstudio.utils.logging import get_logger

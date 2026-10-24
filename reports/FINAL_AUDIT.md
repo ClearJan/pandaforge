@@ -74,6 +74,19 @@ addressed in the same session and the suite re-run green (51/51, ruff clean).
 - Licensing accurate: bundled Panda model Apache-2.0 with license file;
   THIRD_PARTY_NOTICES.md matches reality; .gitignore correct; git tree clean.
 
+## Post-audit regression (found by the first real user run, fixed)
+
+The delivered app degraded to headless mode on the user's machine: the 3D
+viewer never opened. Root cause: `mujoco.viewer` is a lazy submodule and the
+code used it without `import mujoco.viewer`; the graceful headless fallback
+caught the resulting AttributeError and logged it as a warning. Lesson and
+remediation: (1) fixed in `simulation/viewer.py`; (2) 4 regression tests
+added (`tests/gui/test_viewer.py`) including a REAL window launch test;
+(3) end-to-end verified (engine + live viewer + joint command + clean
+shutdown). This also exposed an acceptance gap - the original Phase 0
+"window opens" check had only verified physics stepping - now closed by the
+real-launch test.
+
 ## Remaining known limitations (documented, accepted)
 
 - Windows-first tooling (`.cmd` scripts); Linux/macOS users must use

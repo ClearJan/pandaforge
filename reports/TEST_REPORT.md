@@ -2,7 +2,7 @@
 
 Test suite: `pytest tests` on 2026-10-25, Windows 11, Python 3.11.9,
 pytest 9.1.1 + pytest-timeout. QT runs with the offscreen platform except
-where noted. Result: **51 passed, 0 failed, 0 skipped** (25.2 s).
+the viewer tests, which open a REAL MuJoCo window (skipped on display-less CI). Result: **55 passed, 0 failed, 0 skipped** (incl. 4 real-viewer tests).
 
 Legend: PASS / FAIL / SKIP / BLOCKED / NOT RUN — nothing below is
 pre-filled; every PASS row corresponds to a real executed test.
@@ -44,6 +44,21 @@ pre-filled; every PASS row corresponds to a real executed test.
 | test_plan_and_execute_flow | plan worker → trajectory worker → executor → completed | PASS |
 | test_scene_switch_flow | in-place scene switching | PASS |
 | test_full_pick_place_via_ui | the ENTIRE pick&place driven through UI signals | PASS |
+
+## Viewer tests (`tests/gui/test_viewer.py`) — 4 tests, all PASS
+
+| Test | What it proves | Result |
+|---|---|---|
+| test_mujoco_viewer_submodule_importable | pins the lazy-submodule trap (`mujoco.viewer` needs explicit import) | PASS |
+| test_viewer_module_imports_cleanly | wrapper module imports | PASS |
+| test_real_viewer_launch_and_close | the ACTUAL passive viewer opens, syncs, closes (skipped on display-less machines) | PASS |
+| test_viewer_handle_wrapper_launches | the RobotStudio wrapper's real launch path | PASS |
+
+Post-release regression found by the USER's first run: the 3D viewer never
+opened because `mujoco.viewer` was used without an explicit import; the
+graceful headless fallback masked it as a warning. Fixed in
+`simulation/viewer.py`, pinned by the tests above, verified end-to-end
+(engine + live viewer + joint command + clean shutdown).
 
 ## Interactive verification (manual, NOT covered by offscreen tests)
 
