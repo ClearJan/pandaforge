@@ -22,6 +22,7 @@ from dataclasses import dataclass, field
 import mujoco
 import numpy as np
 
+from robotstudio.kinematics.pose import mat_to_quat
 from robotstudio.robots.panda import PandaRobot
 from robotstudio.utils.logging import get_logger
 
@@ -70,8 +71,25 @@ class CollisionChecker:
         }
         # Extra user-supplied allowances (tests / special scenes).
         self.extra_allowed_pairs: set[frozenset[str]] = set()
+        # Carried-cube transform (grasp FSM): while set, every checked
+        # configuration places the cube at (hand pose ∘ offset) so transfer
+        # paths are validated with the object actually moving with the
+        # gripper. offset = (pos in hand frame (3,), R_hand->cube (3,3)).
+        self.cube_carry_offset: tuple[np.ndarray, np.ndarray] | None = None
         # Cached geom ids grouped by body id.
         self._body_of_geom = np.asarray(model.geom_bodyid).copy()
+        try:
+            self._cube_qposadr = int(model.jnt_qposadr[model.joint("cube_joint").id]) if self._has_cube(model) else None
+        except (KeyError, ValueError):
+            self._cube_qposadr = None
+
+    @staticmethod
+    def _has_cube(model) -> bool:
+        try:
+            model.body("cube")
+            return True
+        except (KeyError, ValueError):
+            return False
 
     # ------------------------------------------------------------------ #
     def set_allowed(self, pairs: list[tuple[str, str]]) -> None:
@@ -87,7 +105,7 @@ class CollisionChecker:
         bid = int(self._body_of_geom[gid])
         return str(mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, bid))
 
-    def _pair_allowed(self, g1: int, g2: int, holding_cube: bool) -> bool:
+    def _pair_allowed(self, g1: int, g2: int, holding_cube: bool, allow_cube_rest: bool = False) -> bool:
         b1, b2 = self._body_name(g1), self._body_name(g2)
         pair = frozenset((b1, b2))
         if pair in self.extra_allowed_pairs:
@@ -95,23 +113,33 @@ class CollisionChecker:
         if pair in self.grasp_body_pairs:
             return holding_cube
         if pair in self.rest_body_pairs:
-            return not holding_cube
+            return allow_cube_rest or not holding_cube
         return False
 
-    def _check_single(self, arm_q: np.ndarray, finger_opening: float, holding_cube: bool) -> list[tuple[str, str, float]]:
+    def _check_single(self, arm_q: np.ndarray, finger_opening: float, holding_cube: bool, allow_cube_rest: bool = False) -> list[tuple[str, str, float]]:
         """Run kinematics+collision for one configuration; return violations."""
         m, d = self.model, self.data
         d.qpos[self.robot.arm_qposadr] = arm_q
         d.qpos[self.robot.finger_qposadr] = finger_opening
         d.qvel[:] = 0
         mujoco.mj_kinematics(m, d)
+        if self.cube_carry_offset is not None and self._cube_qposadr is not None:
+            pos_rel, R_rel = self.cube_carry_offset
+            hand = d.body(self.robot.ee_body_id)
+            R_hand = np.asarray(hand.xmat).reshape(3, 3)
+            cube_R = R_hand @ R_rel
+            cube_pos = np.asarray(hand.xpos) + R_hand @ pos_rel
+            q = mat_to_quat(cube_R)
+            d.qpos[self._cube_qposadr : self._cube_qposadr + 3] = cube_pos
+            d.qpos[self._cube_qposadr + 3 : self._cube_qposadr + 7] = q
+            mujoco.mj_kinematics(m, d)  # refresh cube geoms
         mujoco.mj_comPos(m, d)
         mujoco.mj_collision(m, d)
         violations: list[tuple[str, str, float]] = []
         for i in range(d.ncon):
             con = d.contact[i]
             g1, g2 = int(con.geom1), int(con.geom2)
-            if self._pair_allowed(g1, g2, holding_cube):
+            if self._pair_allowed(g1, g2, holding_cube, allow_cube_rest):
                 continue
             violations.append((self._body_name(g1), self._body_name(g2), float(con.dist)))
         return violations
@@ -122,12 +150,13 @@ class CollisionChecker:
         finger_opening: float = 0.04,
         holding_cube: bool = False,
         check_limits: bool = True,
+        allow_cube_rest: bool = False,
     ) -> CollisionReport:
         """Validate one arm configuration (7, radians)."""
         arm_q = np.asarray(arm_q, dtype=float)
         if check_limits and not self.robot.within_limits(arm_q):
             return CollisionReport(False, 1, [("joint_limits", "joint_limits", 0.0)], 0)
-        violations = self._check_single(arm_q, finger_opening, holding_cube)
+        violations = self._check_single(arm_q, finger_opening, holding_cube, allow_cube_rest)
         return CollisionReport(valid=not violations, n_samples=1, violations=violations, first_bad_sample=0 if violations else None)
 
     def check_segment(
@@ -137,6 +166,7 @@ class CollisionChecker:
         finger_opening: float = 0.04,
         holding_cube: bool = False,
         max_step: float = MAX_SEGMENT_STEP_RAD,
+        allow_cube_rest: bool = False,
     ) -> CollisionReport:
         """Densely interpolate a joint-space segment and validate every sample."""
         q0 = np.asarray(q0, dtype=float)
@@ -144,7 +174,7 @@ class CollisionChecker:
         n = max(2, int(np.ceil(np.max(np.abs(q1 - q0)) / max_step)) + 1)
         for i, t in enumerate(np.linspace(0.0, 1.0, n)):
             q = (1 - t) * q0 + t * q1
-            rep = self.check_state(q, finger_opening, holding_cube)
+            rep = self.check_state(q, finger_opening, holding_cube, allow_cube_rest=allow_cube_rest)
             if not rep.valid:
                 return CollisionReport(False, i + 1, rep.violations, i)
         return CollisionReport(True, n)
@@ -155,6 +185,7 @@ class CollisionChecker:
         finger_opening: float = 0.04,
         holding_cube: bool = False,
         max_step: float = MAX_SEGMENT_STEP_RAD,
+        allow_cube_rest: bool = False,
     ) -> CollisionReport:
         """Validate a full waypoint path (N,7) including all sub-segments."""
         arr = np.asarray(path, dtype=float)
@@ -163,12 +194,12 @@ class CollisionChecker:
         if arr.shape[0] == 0:
             return CollisionReport(True, 0)
         total = 0
-        rep = self.check_state(arr[0], finger_opening, holding_cube)
+        rep = self.check_state(arr[0], finger_opening, holding_cube, allow_cube_rest=allow_cube_rest)
         total += 1
         if not rep.valid:
             return CollisionReport(False, total, rep.violations, 0)
         for i in range(1, arr.shape[0]):
-            rep = self.check_segment(arr[i - 1], arr[i], finger_opening, holding_cube, max_step)
+            rep = self.check_segment(arr[i - 1], arr[i], finger_opening, holding_cube, max_step, allow_cube_rest)
             total += rep.n_samples
             if not rep.valid:
                 return CollisionReport(False, total, rep.violations, i)
