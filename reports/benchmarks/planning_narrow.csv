@@ -1,0 +1,49 @@
+scenario,planner,seed,success,independently_validated,time_s,path_length_rad,n_waypoints,n_nodes,n_collision_checks,shortcut_reduction_pct,message
+narrow,linear,100,False,,0.0016044999938458204,0.0,0,2,50,0,"straight-line path in collision: collision at sample 3: left_finger<->shelf_left (-0.0026m), shelf_left<->left_finger (-0.0043m), shelf_left<->left_finger (-0.0041m)"
+narrow,rrt,100,True,True,1.536621000035666,6.683608289937468,6,2874,4620,63.42113355663352,path found
+narrow,rrt_connect,100,True,True,0.43333219998748973,7.047239068018583,5,301,1234,39.507263834107455,path found
+narrow,linear,101,False,,0.001129399985074997,0.0,0,2,39,0,"straight-line path in collision: collision at sample 3: shelf_left<->hand (-0.0042m), shelf_left<->hand (-0.0041m)"
+narrow,rrt,101,True,True,5.160832799971104,6.792481653212182,4,9601,14783,53.44113696766334,path found
+narrow,rrt_connect,101,True,True,0.22194909997051582,5.593482589920901,4,75,418,30.75548342817691,path found
+narrow,linear,102,False,,0.00064289994770661,0.0,0,2,18,0,straight-line path in collision: collision at sample 1: shelf_right<->link5 (-0.0009m)
+narrow,rrt,102,True,True,7.031603999959771,7.5290698309771695,5,12509,19051,62.174236564509336,path found
+narrow,rrt_connect,102,True,True,0.49551789998076856,6.477387077532909,6,513,1997,39.5043315115132,path found
+narrow,linear,105,False,,0.0018980000168085098,0.0,0,2,62,0,"straight-line path in collision: collision at sample 4: shelf_left<->hand (-0.0017m), shelf_left<->hand (-0.0017m)"
+narrow,rrt,105,True,True,3.2009439999819733,6.252703461090993,5,5686,10064,30.540757150886588,path found
+narrow,rrt_connect,105,True,True,0.4145241000223905,6.4475385528073765,6,258,1061,34.87170580345777,path found
+narrow,linear,106,False,,0.0006408999906852841,0.0,0,2,16,0,straight-line path in collision: collision at sample 1: shelf_right<->link5 (-0.0005m)
+narrow,rrt,106,False,,7.372490400040988,0.0,0,13128,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,106,True,True,0.24592680000932887,8.529474787107526,7,138,645,32.693217696308544,path found
+narrow,linear,110,False,,0.0013163000112399459,0.0,0,2,42,0,"straight-line path in collision: collision at sample 3: shelf_left<->hand (-0.0021m), shelf_left<->hand (-0.0021m), shelf_left<->hand (-0.0020m)"
+narrow,rrt,110,False,,7.707088199967984,0.0,0,13749,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,110,True,True,0.2419893000042066,5.126713266711639,3,50,323,35.627990774321304,path found
+narrow,linear,111,False,,0.0012060000444762409,0.0,0,2,40,0,"straight-line path in collision: collision at sample 3: shelf_left<->hand (-0.0040m), shelf_left<->hand (-0.0037m)"
+narrow,rrt,111,False,,7.474936799961142,0.0,0,13132,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,111,True,True,0.16493190004257485,4.98344894622249,5,76,401,28.650201688899713,path found
+narrow,linear,112,False,,0.0013983999961055815,0.0,0,2,43,0,"straight-line path in collision: collision at sample 3: shelf_left<->hand (-0.0059m), shelf_left<->hand (-0.0059m)"
+narrow,rrt,112,False,,7.596071599982679,0.0,0,13612,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,112,True,True,0.12158989999443293,4.09926398251232,4,42,316,22.761828922396386,path found
+narrow,linear,115,False,,0.0012135999859310687,0.0,0,2,39,0,"straight-line path in collision: collision at sample 3: shelf_left<->hand (-0.0035m), shelf_left<->hand (-0.0026m), shelf_left<->hand (-0.0036m)"
+narrow,rrt,115,False,,7.515943699982017,0.0,0,13230,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,115,True,True,0.3253553999820724,8.21728359839642,7,228,930,33.22825735556167,path found
+narrow,linear,116,False,,0.0015155000146478415,0.0,0,2,45,0,"straight-line path in collision: collision at sample 3: left_finger<->shelf_left (-0.0003m), shelf_left<->left_finger (-0.0015m)"
+narrow,rrt,116,False,,7.494085300015286,0.0,0,13810,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,116,True,True,0.4056986999930814,7.899976472541762,5,372,1305,45.580222748601905,path found
+narrow,linear,117,False,,0.0008991999784484506,0.0,0,2,27,0,"straight-line path in collision: collision at sample 2: shelf_left<->hand (-0.0012m), left_finger<->shelf_left (-0.0044m), left_finger<->shelf_left (-0.0009m), left_finger<->shelf_left (-0.0020m)"
+narrow,rrt,117,False,,7.416611599968746,0.0,0,13275,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,117,True,True,0.3277202999452129,7.861847722095896,9,242,1005,46.84708936537068,path found
+narrow,linear,121,False,,0.0014845000114291906,0.0,0,2,39,0,straight-line path in collision: collision at sample 3: shelf_left<->hand (-0.0023m)
+narrow,rrt,121,True,True,7.453163400001358,5.736172515989191,6,13238,19778,42.32479252778081,path found
+narrow,rrt_connect,121,True,True,0.18746040004771203,5.462605453573227,4,77,388,37.3739086123868,path found
+narrow,linear,122,False,,0.0011565000168047845,0.0,0,2,41,0,"straight-line path in collision: collision at sample 3: shelf_left<->hand (-0.0051m), shelf_left<->hand (-0.0044m), shelf_left<->hand (-0.0051m)"
+narrow,rrt,122,True,True,6.478816199989524,5.133463272919103,6,11736,17342,37.59108148817347,path found
+narrow,rrt_connect,122,True,True,0.2152261000010185,3.9130039692066445,3,37,286,30.924326797902236,path found
+narrow,linear,123,False,,0.0005871999892406166,0.0,0,2,16,0,straight-line path in collision: collision at sample 1: shelf_right<->link5 (-0.0020m)
+narrow,rrt,123,False,,7.6994202000205405,0.0,0,13709,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,123,True,True,0.22443120001116768,7.687777134881333,7,137,698,35.77254990134722,path found
+narrow,linear,124,False,,0.0011076999944634736,0.0,0,2,35,0,"straight-line path in collision: collision at sample 3: shelf_left<->hand (-0.0017m), shelf_left<->hand (-0.0015m)"
+narrow,rrt,124,False,,7.684194300032686,0.0,0,13735,20002,0,max iterations reached without finding the goal
+narrow,rrt_connect,124,True,True,0.1905098999850452,4.501291483626067,5,99,468,34.3054374621984,path found
+narrow,linear,127,False,,0.000548899988643825,0.0,0,2,16,0,straight-line path in collision: collision at sample 1: shelf_right<->link5 (-0.0005m)
+narrow,rrt,127,True,True,2.8902316000312567,6.696669495081382,4,5420,9062,33.834272695782516,path found
+narrow,rrt_connect,127,True,True,0.27587399998446926,7.521962145380015,6,198,866,43.2182149675499,path found

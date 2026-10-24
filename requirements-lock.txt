@@ -8,5 +8,5 @@ matplotlib==3.11.2
 pytest==9.1.1
 pytest-timeout==2.4.0
 # dev/release extras
-ruff==0.14.4
-pyinstaller==6.19.0
+ruff==0.17.2
+pyinstaller==6.22.3

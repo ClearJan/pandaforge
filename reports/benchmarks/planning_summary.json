@@ -1,0 +1,74 @@
+{
+  "empty/linear": {
+    "n": 28,
+    "success_rate": 1.0,
+    "median_time_s": 0.0017876499914564192,
+    "p90_time_s": 0.002613119996385649,
+    "median_path_length": 3.7009515166967217,
+    "invalid_paths_reported_ok": 0
+  },
+  "empty/rrt": {
+    "n": 28,
+    "success_rate": 1.0,
+    "median_time_s": 0.021376249991590157,
+    "p90_time_s": 0.029588039976079016,
+    "median_path_length": 3.7009515166967217,
+    "invalid_paths_reported_ok": 0
+  },
+  "empty/rrt_connect": {
+    "n": 28,
+    "success_rate": 1.0,
+    "median_time_s": 0.006867399992188439,
+    "p90_time_s": 0.010066969989566132,
+    "median_path_length": 3.7009515166967217,
+    "invalid_paths_reported_ok": 0
+  },
+  "single_obs/linear": {
+    "n": 10,
+    "success_rate": 0.1,
+    "median_time_s": 0.0026846000109799206,
+    "p90_time_s": 0.0026846000109799206,
+    "median_path_length": 3.4256675330286077,
+    "invalid_paths_reported_ok": 0
+  },
+  "single_obs/rrt": {
+    "n": 10,
+    "success_rate": 0.3,
+    "median_time_s": 2.6565898000262678,
+    "p90_time_s": 4.256042120000347,
+    "median_path_length": 5.513890813167878,
+    "invalid_paths_reported_ok": 0
+  },
+  "single_obs/rrt_connect": {
+    "n": 10,
+    "success_rate": 1.0,
+    "median_time_s": 0.23975415001041256,
+    "p90_time_s": 0.3029936100414488,
+    "median_path_length": 5.65628460562977,
+    "invalid_paths_reported_ok": 0
+  },
+  "narrow/linear": {
+    "n": 16,
+    "success_rate": 0.0,
+    "median_time_s": null,
+    "p90_time_s": null,
+    "median_path_length": null,
+    "invalid_paths_reported_ok": 0
+  },
+  "narrow/rrt": {
+    "n": 16,
+    "success_rate": 0.4375,
+    "median_time_s": 5.160832799971104,
+    "p90_time_s": 7.200227759976406,
+    "median_path_length": 6.683608289937468,
+    "invalid_paths_reported_ok": 0
+  },
+  "narrow/rrt_connect": {
+    "n": 16,
+    "success_rate": 1.0,
+    "median_time_s": 0.24395805000676773,
+    "p90_time_s": 0.4239281500049401,
+    "median_path_length": 6.462462815170143,
+    "invalid_paths_reported_ok": 0
+  }
+}

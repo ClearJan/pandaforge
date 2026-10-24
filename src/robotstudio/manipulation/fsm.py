@@ -503,14 +503,18 @@ class GraspFSM:
         return ctx.arm_q  # wait for settling within the timeout window
 
     def _tick_retreat(self, ctx, now):
-        """Back off to the pregrasp hover, then declare success."""
+        """Back off to a raised hover, then declare success.
+
+        The direct vertical pull-out is tried first (fast); near table edges
+        it can sweep the arm through the table, so the fallback is a proper
+        RRT-Connect free path to the same hover pose. The just-released cube
+        is modelled at its real resting pose, and grasp-pair grazing is
+        tolerated (break-away), while arm-vs-table stays strictly checked.
+        """
         if self._pending_plan is None:
             self._pending_plan = "planning"
             self._planning_note = "retreat"
             cur = ctx.arm_q
-            # Break-away validation: the hand has just released the cube and
-            # may still graze it while pulling out; grasp-pair contacts are
-            # tolerated during this upward move only.
             up = self.ik.solve(
                 Pose.make(ctx_ee(ctx) + [0, 0, self.spec.lift_height], GRASP_QUAT_WXYZ),
                 q_init=cur,
@@ -520,11 +524,19 @@ class GraspFSM:
             if not up.success:
                 self._fail(f"RETREAT: IK failed: {up.message}")
                 return None
-            if not self.checker.check_segment(cur, up.arm_q, 0.04, holding_cube=True, allow_cube_rest=True).valid:
-                self._fail("RETREAT: segment not collision-free")
-                return None
+            if self.checker.check_segment(cur, up.arm_q, 0.04, holding_cube=True, allow_cube_rest=True).valid:
+                waypoints = [cur, up.arm_q]
+            else:
+                # vertical pull-out unsafe (e.g. table edge) -> plan a free path
+                cube = self._cube_pos(ctx)
+                self.checker.set_shadow_cube_pose(cube, np.asarray(ctx.cube_quat))
+                res = self._planner.plan(cur, up.arm_q, holding_cube=True)
+                if not res.success:
+                    self._fail(f"RETREAT: no collision-free retreat path - {res.message}")
+                    return None
+                waypoints = res.path
             try:
-                self._executor = TrajectoryExecutor(self.traj_gen.generate([cur, up.arm_q]))
+                self._executor = TrajectoryExecutor(self.traj_gen.generate(waypoints))
             except Exception as exc:
                 self._fail(f"RETREAT: trajectory generation failed - {exc}")
                 return None

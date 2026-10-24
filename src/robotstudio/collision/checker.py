@@ -97,6 +97,13 @@ class CollisionChecker:
         self.extra_allowed_pairs |= {frozenset(p) for p in pairs}
 
     # ------------------------------------------------------------------ #
+    def set_shadow_cube_pose(self, pos: np.ndarray, quat_wxyz: np.ndarray) -> None:
+        """Pin the shadow-data cube at a known world pose (post-release checks)."""
+        if self._cube_qposadr is None:
+            return
+        self.data.qpos[self._cube_qposadr : self._cube_qposadr + 3] = pos
+        self.data.qpos[self._cube_qposadr + 3 : self._cube_qposadr + 7] = quat_wxyz
+
     def pair_is_allowed(self, g1: int, g2: int, holding_cube: bool) -> bool:
         """Public predicate (used by parity tests and diagnostics)."""
         return self._pair_allowed(g1, g2, holding_cube)

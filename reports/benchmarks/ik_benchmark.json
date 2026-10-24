@@ -1,0 +1,13 @@
+{
+  "n_reachable": 120,
+  "n_unreachable": 20,
+  "success_rate": 1.0,
+  "max_pos_err_mm": 4.991974124841178,
+  "max_rot_err_deg": 2.794583562653099,
+  "mean_time_ms": 9.888108334659288,
+  "p95_time_ms": 56.718875028309405,
+  "limit_violations": 0,
+  "collision_invalid_solutions": 0,
+  "false_success_on_unreachable": 0,
+  "seed": 2028
+}

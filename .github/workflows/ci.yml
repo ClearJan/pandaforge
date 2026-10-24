@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-lock.txt
+          pip install -e . --no-deps
+
+      - name: Regenerate scene files
+        run: python -c "from robotstudio.simulation.scenes import ensure_preset_scene_files; ensure_preset_scene_files()"
+
+      - name: Run test suite (offscreen Qt)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest tests -q --timeout 300
+
+  build:
+    runs-on: windows-latest
+    needs: tests
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies + PyInstaller
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-lock.txt
+          pip install -e . --no-deps
+
+      - name: Build one-folder package
+        run: |
+          pip install pyinstaller
+          python -m PyInstaller --name RobotStudio --noconfirm --windowed --paths src --add-data "assets;assets" --collect-submodules mujoco src/robotstudio/launch_app.py
+
+      - name: Self-test the packaged executable
+        run: dist/RobotStudio/RobotStudio.exe --selftest
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RobotStudio-windows
+          path: dist/RobotStudio/
+          retention-days: 14

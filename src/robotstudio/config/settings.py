@@ -7,10 +7,18 @@ Units used everywhere in this project:
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
-# Project root = repository root (two levels above this file's src/robotstudio/config).
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+
+def _project_root() -> Path:
+    """Repository root in dev mode; PyInstaller extraction dir when frozen."""
+    if getattr(sys, "frozen", False):  # PyInstaller one-folder bundle
+        return Path(sys._MEIPASS)  # noqa: SLF001 - documented PyInstaller attribute
+    return Path(__file__).resolve().parents[3]
+
+
+PROJECT_ROOT = _project_root()
 SRC_ROOT = PROJECT_ROOT / "src"
 ASSETS_ROOT = PROJECT_ROOT / "assets"
 ROBOTS_ROOT = ASSETS_ROOT / "robots"
