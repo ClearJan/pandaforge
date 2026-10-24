@@ -59,18 +59,18 @@ or report path). This file is updated as work progresses, never pre-filled.
 
 | Task | Owner | Status | Evidence |
 |---|---|---|---|
-| Full pytest suite green | QA | PENDING | — |
-| Performance profile before/after optimizations, same seeds | QA | PENDING | — |
+| Full pytest suite green (51/51) + ruff clean | QA | DONE | `reports/TEST_REPORT.md`, `reports/FINAL_AUDIT.md` |
+| Performance profile before/after optimizations, same seeds | QA | DONE | `reports/BENCHMARKS.md` §5 (NN vectorization 3.2x, sampling fix 75s->0.6s) |
 
 ## Phase 7 — Release
 
 | Task | Owner | Status | Evidence |
 |---|---|---|---|
-| setup/run/test/build .cmd scripts | Release | PENDING | — |
-| PyInstaller one-folder package, launch-tested | Release | PENDING | — |
-| GitHub Actions CI (windows-latest) | Release | PENDING | — |
-| Docs: README/ARCHITECTURE/ALGORITHMS/BENCHMARKS/TEST_REPORT/PORTFOLIO | Release | PENDING | — |
-| Independent final audit | Reviewer | PENDING | — |
+| setup/run/test/build .cmd scripts, all executed | Release | DONE | session log; setup self-check OK, build self-test exit 0 |
+| PyInstaller one-folder package, launch-tested (model+physics+plan+execute) | Release | DONE | `dist/RobotStudio/`, self-test exit 0 in 3.7 s |
+| GitHub Actions CI (windows-latest: tests + build artifact) | Release | DONE | `.github/workflows/ci.yml` |
+| Docs: README/ARCHITECTURE/ALGORITHMS/BENCHMARKS/TEST_REPORT/PORTFOLIO/DECISIONS/RISK_REGISTER/CHANGELOG/THIRD_PARTY | Release | DONE | repo root + `docs/` + `reports/` |
+| Independent final audit (APPROVE after 2 P1 + 8 P2 fixed) | Reviewer | DONE | `reports/FINAL_AUDIT.md` |
 
 ## Known Issues / Decisions Log
 

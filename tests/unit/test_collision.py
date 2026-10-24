@@ -18,6 +18,7 @@ from robotstudio.collision.checker import CollisionChecker
 from robotstudio.config import PandaSpec
 from robotstudio.kinematics.ik import IKSolver
 from robotstudio.kinematics.pose import Pose
+from robotstudio.manipulation.grasp import grasp_pose, pregrasp_pose
 
 
 def _make_checker(model, robot):
@@ -69,23 +70,26 @@ def test_checker_matches_mj_forward(tabletop):
 
 
 def test_mid_segment_penetration_caught(single_obs):
-    """Both endpoints free, straight segment passes through the wall -> fail."""
+    """Both endpoints free, straight segment passes through the wall -> fail.
+
+    Setup asserts (no early return): if the far-side IK cannot produce a
+    collision-free goal, the test FAILS loudly rather than passing vacuously.
+    """
     model, data, robot = single_obs
     checker = _make_checker(model, robot)
-    assert checker.check_state(np.array(PandaSpec.HOME_QPOS)).valid
+    home = np.array(PandaSpec.HOME_QPOS)
+    assert checker.check_state(home).valid
 
-    ik = IKSolver(model, mujoco.MjData(model), robot, seed=3)
-    # goal on the far side (beyond the wall at y=-0.24, x 0.25..0.65)
-    target = Pose.make([0.45, -0.45, 0.45], [0.5, 0.5, -0.5, -0.5])
-    res = ik.solve(target, n_restarts=8, validate=lambda q: checker.check_state(q).valid)
-    if not res.success:
-        # IK could not find a collision-free far-side config; test the
-        # segment property with a manually constructed pair instead.
-        return
+    ik = IKSolver(model, mujoco.MjData(model), robot, seed=42)
+    # goal beyond the wall (wall: x 0.25..0.65, y -0.27..-0.21, z 0.3..0.7);
+    # pose chosen by setup probes so a collision-free config exists
+    target = Pose.make([0.35, -0.40, 0.55], [0.0, 1.0, 0.0, 0.0])
+    res = ik.solve(target, n_restarts=12, validate=lambda q: checker.check_state(q).valid)
+    assert res.success, f"test setup must produce a collision-free far-side config: {res.message}"
     q_goal = res.arm_q
     assert checker.check_state(q_goal).valid
-    rep = checker.check_segment(np.array(PandaSpec.HOME_QPOS), q_goal)
-    # The straight line from home to a behind-the-wall goal must cross it.
+    rep = checker.check_segment(home, q_goal)
+    # the straight line from home to a behind-the-wall goal must cross it
     assert not rep.valid, "discrete check missed a mid-segment collision"
     assert rep.first_bad_sample is not None and rep.first_bad_sample > 0
 
@@ -93,13 +97,18 @@ def test_mid_segment_penetration_caught(single_obs):
 def test_gripper_cube_contact_whitelist(tabletop):
     model, data, robot = tabletop
     checker = _make_checker(model, robot)
-    # Hand frame +z points along the fingers; top-down grasp => +z = world -z.
+    # Production grasp setup, mirroring the FSM: solve the pregrasp hover
+    # first, then the grasp pose seeded from it (random multi-start alone
+    # often lands on elbow-through-table branches for this low pose).
     ik = IKSolver(model, mujoco.MjData(model), robot, seed=11)
     cube_pos = data.body("cube").xpos
-    grasp = Pose.make(cube_pos + [0, 0, 0.06], [0.0, 1.0, 0.0, 0.0])  # hand z down
-    res = ik.solve(grasp, n_restarts=10, validate=lambda q: checker.check_state(q).valid)
-    if not res.success:
-        return  # grasp pose unreachable in this scene variant; covered by FSM tests
+    pre = pregrasp_pose(cube_pos, 0.025)
+    res_pre = ik.solve(pre, n_restarts=12, validate=lambda q: checker.check_state(q).valid)
+    assert res_pre.success, f"test setup must solve the pregrasp pose: {res_pre.message}"
+    grasp = grasp_pose(cube_pos, 0.025)
+    res = ik.solve(grasp, q_init=res_pre.arm_q, n_restarts=12,
+                   validate=lambda q: checker.check_state(q).valid)
+    assert res.success, f"test setup must solve the grasp pose collision-free: {res.message}"
 
     def violation_pairs(rep):
         return {frozenset((a, b)) for a, b, _ in rep.violations}
@@ -113,8 +122,13 @@ def test_gripper_cube_contact_whitelist(tabletop):
     assert violation_pairs(rep_free) & grasp_pairs, "free mode missed finger-cube interpenetration"
     # Holding mode: the squeeze IS the grasp and must be whitelisted.
     assert not (violation_pairs(rep_hold) & grasp_pairs), "holding mode flagged the grasp itself"
-    # Non-grasp violations must be identical across modes (same configuration).
-    assert violation_pairs(rep_free) - grasp_pairs == violation_pairs(rep_hold) - grasp_pairs
+    # Arm-vs-world violations must be identical across modes (same config);
+    # grasp pairs AND rest pairs (cube-table) are mode-dependent by design.
+    rest_pairs = checker.rest_body_pairs
+    assert (
+        violation_pairs(rep_free) - grasp_pairs - rest_pairs
+        == violation_pairs(rep_hold) - grasp_pairs - rest_pairs
+    ), "arm-vs-world violations inconsistent between modes"
 
 
 def test_joint_limit_violation_reported(checker):

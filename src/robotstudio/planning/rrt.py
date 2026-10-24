@@ -37,6 +37,8 @@ class _Tree:
         self.n = 1
 
     def add(self, q: np.ndarray, parent: int) -> int:
+        if self.n >= _TREE_CAPACITY:
+            raise RuntimeError(f"planner tree capacity ({_TREE_CAPACITY}) exceeded")
         idx = self.n
         self.points[idx] = q
         self.parents[idx] = parent

@@ -92,10 +92,6 @@ class CollisionChecker:
             return False
 
     # ------------------------------------------------------------------ #
-    def set_allowed(self, pairs: list[tuple[str, str]]) -> None:
-        """Extend the whitelist (used by tests to build ground-truth scenes)."""
-        self.extra_allowed_pairs |= {frozenset(p) for p in pairs}
-
     # ------------------------------------------------------------------ #
     def set_shadow_cube_pose(self, pos: np.ndarray, quat_wxyz: np.ndarray) -> None:
         """Pin the shadow-data cube at a known world pose (post-release checks)."""

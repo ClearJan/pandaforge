@@ -41,7 +41,7 @@ project coherently.
 - `TrajectoryGenerator.generate(path) -> Trajectory`; `Trajectory.sample(t)`
 - `SimulationEngine`: `submit(Command)`, `snapshot() -> SimSnapshot`,
   `set_controller(Controller)`, `on_estop(cb)`
-- `GraspFSM(engine, checker, ik, planner_factory, spec)` — ticked by engine thread
+- `GraspFSM(engine, spec)` — a Controller ticked by the engine thread; builds its own checker/IK/planner (shadow data)
 
 ## Integration gate
 

@@ -7,7 +7,7 @@ where noted. Result: **51 passed, 0 failed, 0 skipped** (25.2 s).
 Legend: PASS / FAIL / SKIP / BLOCKED / NOT RUN — nothing below is
 pre-filled; every PASS row corresponds to a real executed test.
 
-## Unit tests (`tests/unit/`) — 28 tests, all PASS
+## Unit tests (`tests/unit/`) — 37 tests, all PASS
 
 | Test file | Covers | Result |
 |---|---|---|

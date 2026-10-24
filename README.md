@@ -95,7 +95,7 @@ All numbers from real runs on this machine (raw data in
 | Area | Result |
 |---|---|
 | IK (120 FK-derived reachable targets) | 100% solved, ≤ 5.0 mm / ≤ 2.8°, mean 9.9 ms, 0 false positives on 20 unreachable targets |
-| Planning (3 scenes × 28-30 seeds × 3 planners) | RRT-Connect 100% everywhere (median 0.19–0.23 s); single-tree RRT 45–47% on blocked scenes; **0 of 261 "successful" paths failed independent re-validation** |
+| Planning (3 scenes × 28-30 seeds × 3 planners) | RRT-Connect 100% everywhere (median 0.19–0.23 s); single-tree RRT 45–47% on blocked scenes; **0 of the 178 produced paths failed independent re-validation (261 trials)** |
 | Pick & place (35 physical trials) | base 20/20, jittered 10/10, table-edge 5/5; 3/3 impossible targets correctly rejected |
 | Collision check cost | 0.052 ms per state |
 

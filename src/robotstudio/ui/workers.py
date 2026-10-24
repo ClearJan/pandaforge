@@ -9,6 +9,7 @@ from __future__ import annotations
 import mujoco
 from PySide6.QtCore import QThread, Signal
 
+from robotstudio.collision.checker import CollisionChecker
 from robotstudio.kinematics.ik import IKSolver
 from robotstudio.kinematics.pose import Pose
 from robotstudio.planning.base import JointSpacePlanner
@@ -28,11 +29,19 @@ class IKWorker(QThread):
         self._robot = robot
         self._target = target
         self._q_init = q_init
+        # collision-filtered IK: a solution that would place the arm inside
+        # the table/obstacles is rejected, matching the planning pipeline
+        self._checker = CollisionChecker(model, robot)
 
     def run(self) -> None:
         try:
             solver = IKSolver(self._model, mujoco.MjData(self._model), self._robot)
-            result = solver.solve(self._target, q_init=self._q_init, n_restarts=8)
+            result = solver.solve(
+                self._target,
+                q_init=self._q_init,
+                n_restarts=8,
+                validate=lambda q: self._checker.check_state(q).valid,
+            )
             self.finished_ok.emit(result)
         except Exception as exc:
             log.exception("IK worker failed")

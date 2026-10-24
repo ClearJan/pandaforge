@@ -91,11 +91,12 @@ class IKSolver:
         validate : optional callable (7,) -> bool (e.g. collision-free check);
             a candidate that fails validation is rejected and search continues.
         """
+        # Attempt list: q_init (if given) + home + n_restarts random seeds.
         seeds: list[np.ndarray] = []
         if q_init is not None:
             seeds.append(self.robot.clip_to_limits(q_init))
         seeds.append(np.array(PandaSpec.HOME_QPOS))
-        while len(seeds) < 1 + n_restarts:
+        while len(seeds) < 2 + n_restarts:
             seeds.append(self.robot.clip_to_limits(self._random_seed()))
 
         best: IKResult | None = None

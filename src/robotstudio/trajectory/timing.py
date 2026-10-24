@@ -67,7 +67,11 @@ class Trajectory:
         """(max |v| / vmax, max |a| / amax) over a dense grid; 1.0 == at limit.
 
         The grid keeps at most ``max_samples`` points (dt grows for long
-        trajectories) so cost stays bounded regardless of duration.
+        trajectories) so cost stays bounded. NOTE: for very long trajectories
+        the grid step can exceed the spline knot spacing, so peaks strictly
+        inside one grid cell may be undersampled - the check is near-tight in
+        practice (the trapezoidal allocation leaves margin) but is not a
+        strict mathematical upper bound for arbitrary durations.
         """
         dt_eff = max(dt, self.duration / max_samples)
         ts = np.arange(0.0, self.duration + dt_eff / 2, dt_eff)

@@ -122,11 +122,16 @@ def run_grasp_benchmark(base_runs: int = 20, jitter_runs: int = 10, hard_runs: i
     for kind in ("base", "jitter", "hard_place", "impossible"):
         rs = [r for r in rows if r["kind"] == kind]
         if rs:
-            summary[kind] = {
+            entry = {
                 "n": len(rs),
                 "success_rate": sum(1 for r in rs if r["success"]) / len(rs),
                 "median_wall_s": float(np.median([r["wall_time_s"] for r in rs])),
             }
+            if kind == "impossible":
+                # for impossible targets "success" means the task was correctly
+                # REJECTED - rename to avoid misreading as task success
+                entry["correct_rejection_rate"] = entry.pop("success_rate")
+            summary[kind] = entry
     with open(BENCH_ROOT / "grasp_summary.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
     log.info("grasp benchmark done: %s", json.dumps(summary))
