@@ -144,6 +144,7 @@ class GraspFSM:
         self._cube_z_at_grasp = float("nan")
         self._grasp_verified = False
         self._retrying = False
+        self._hold_target: np.ndarray | None = None
         self._planning_note = ""
         engine.on_estop(self.abort)
 
@@ -298,6 +299,9 @@ class GraspFSM:
         targets = self._executor.update(ctx, self.engine.model.opt.timestep)
         if self._executor.stats.finished:
             if self._executor.stats.success:
+                # hold the STATIC final waypoint afterwards: holding the actual
+                # position instead would ratchet downward under gravity droop
+                self._hold_target = self._executor.final_target.copy()
                 self._transition(next_state)
             else:
                 self._fail(f"{self.state.value}: execution failed")
@@ -354,7 +358,7 @@ class GraspFSM:
         if now >= self._wait_until_t:
             self._wait_until_t = None
             self._transition(GraspState.VERIFY_GRASP)
-        return ctx.arm_q  # hold position while closing
+        return self._hold_target if self._hold_target is not None else ctx.arm_q  # hold static target
 
     def _tick_verify_grasp(self, ctx, now):
         """Physical evidence: fingertip-cube contacts must exist."""
@@ -365,22 +369,20 @@ class GraspFSM:
             R_hand = quat_to_mat(np.asarray(hand.xquat).copy())
             cube_quat = np.asarray(ctx.cube_quat).copy()
             R_cube = quat_to_mat(cube_quat)
-            self._carry_offset = (np.asarray(hand.xpos).copy(), R_hand.T @ R_cube)
-            # position offset needs hand translation too:
             cube_pos = self._cube_pos(ctx)
             self._carry_offset = (R_hand.T @ (cube_pos - np.asarray(hand.xpos)), R_hand.T @ R_cube)
             self.checker.cube_carry_offset = self._carry_offset
             self._cube_z_at_grasp = float(cube_pos[2])
             self._grasp_verified = True
             self._transition(GraspState.LIFT)
-            return ctx.arm_q
+            return self._hold_target if self._hold_target is not None else ctx.arm_q
         self._grasp_retries += 1
         if self._grasp_retries <= self.spec.max_grasp_retries:
             log.warning("no grasp contacts (%d); reopening, pulling out and re-approaching", contacts)
             self.engine.set_gripper(PandaSpec.FINGER_OPEN)
             self._retrying = True
             self._transition(GraspState.LIFT)  # pull-out validates with holding-mode whitelist
-            return ctx.arm_q
+            return self._hold_target if self._hold_target is not None else ctx.arm_q
         self._fail(f"VERIFY_GRASP: no stable fingertip contacts after retries (contacts={contacts})")
         return None
 
@@ -482,7 +484,7 @@ class GraspFSM:
         if now >= self._wait_until_t:
             self._wait_until_t = None
             self._transition(GraspState.VERIFY_PLACE)
-        return ctx.arm_q
+        return self._hold_target if self._hold_target is not None else ctx.arm_q
 
     def _tick_verify_place(self, ctx, now):
         """Independent physical criteria for a completed placement."""
@@ -496,7 +498,7 @@ class GraspFSM:
         settled = bool(np.all(np.abs(cube_vel) < 0.05))
         if xy_err <= self.spec.place_xy_tolerance and z_ok and opening > 0.035 and settled:
             self._transition(GraspState.RETREAT)
-            return ctx.arm_q
+            return self._hold_target if self._hold_target is not None else ctx.arm_q
         if now - self._phase_entered_at > 2.5 and not z_ok:
             self._fail(f"VERIFY_PLACE: cube not placed (xy_err={xy_err:.3f} m, z={cube[2]:.3f})")
             return None
@@ -527,10 +529,17 @@ class GraspFSM:
             if self.checker.check_segment(cur, up.arm_q, 0.04, holding_cube=True, allow_cube_rest=True).valid:
                 waypoints = [cur, up.arm_q]
             else:
-                # vertical pull-out unsafe (e.g. table edge) -> plan a free path
+                # vertical pull-out unsafe (e.g. table edge) -> plan a free path.
+                # The released cube is a free object resting on the table, so
+                # cube-rest contacts must be tolerated while planning (only the
+                # ARM's motion is planned); arm-vs-table stays strict.
                 cube = self._cube_pos(ctx)
                 self.checker.set_shadow_cube_pose(cube, np.asarray(ctx.cube_quat))
-                res = self._planner.plan(cur, up.arm_q, holding_cube=True)
+                self.checker.extra_allowed_pairs |= self.checker.rest_body_pairs
+                try:
+                    res = self._planner.plan(cur, up.arm_q, holding_cube=True)
+                finally:
+                    self.checker.extra_allowed_pairs -= self.checker.rest_body_pairs
                 if not res.success:
                     self._fail(f"RETREAT: no collision-free retreat path - {res.message}")
                     return None

@@ -1,0 +1,71 @@
+# Test Report
+
+Test suite: `pytest tests` on 2026-10-25, Windows 11, Python 3.11.9,
+pytest 9.1.1 + pytest-timeout. QT runs with the offscreen platform except
+where noted. Result: **51 passed, 0 failed, 0 skipped** (25.2 s).
+
+Legend: PASS / FAIL / SKIP / BLOCKED / NOT RUN — nothing below is
+pre-filled; every PASS row corresponds to a real executed test.
+
+## Unit tests (`tests/unit/`) — 28 tests, all PASS
+
+| Test file | Covers | Result |
+|---|---|---|
+| test_kinematics.py (13) | quaternion/matrix round-trip; SO(3) error incl. near-pi branch; FK home sanity; **Jacobian frame convention via finite differences**; IK 100-pose acceptance (≥95% required, got 100%); out-of-reach rejection; joint-limit compliance; multi-start; tolerance fields | PASS |
+| test_collision.py (7) | home config collision-free; endpoint collision detection; **checker vs mj_forward parity** (30 random states); mid-segment penetration caught (both endpoints free); gripper-cube whitelist semantics in both modes; joint-limit reporting; path validation sampling | PASS |
+| test_planners.py (8) | RRT-Connect invariants on blocked task + independent re-validation; RRT on open task; RRT-Connect efficiency vs RRT; impossible goal fails cleanly (no fake path); linear baseline refuses blocked / accepts free; **seed determinism (identical path)**; shortcutting reduces length + stays valid | PASS |
+| test_trajectory.py (9) | generated trajectories respect v/a limits; endpoints; time clamping; long-jump stretching; degenerate path rejection; tiny-limits feasibility; zero-rescale-budget raise; Panda limit spec; C1 velocity continuity at waypoints | PASS |
+
+## Integration tests (`tests/integration/`) — 5 tests, all PASS
+
+| Test | What it proves | Result |
+|---|---|---|
+| test_manual_joint_command_converges | direct commands drive the physical arm | PASS |
+| test_invalid_joint_command_raises | invalid targets raise, never silently accepted | PASS |
+| test_trajectory_execution_through_physics | plan → time-parameterize → execute via servos; arm ends at goal; tracking stats collected from the real run | PASS |
+| test_infeasible_trajectory_is_refused | hand-built too-fast trajectory rejected before execution | PASS |
+| test_estop_freezes_motion | e-stop mid-trajectory holds targets (drift < 0.05 rad) | PASS |
+
+## Physics tests (`tests/physics/`) — 3 tests, all PASS
+
+| Test | What it proves | Result |
+|---|---|---|
+| test_full_pick_and_place_success | the full FSM chain physically grasps and places the cube; independent post-check (xy ≤ 35 mm, resting z, moved > 150 mm, gripper open); ALL 11 states visited in order | PASS |
+| test_grasp_rejects_unreachable_place | out-of-reach place target fails with a clear reason | PASS |
+| test_abort_stops_task | user abort reaches ABORTED and the arm stops | PASS |
+
+## GUI tests (`tests/gui/`) — 6 tests, all PASS (offscreen Qt)
+
+| Test | What it proves | Result |
+|---|---|---|
+| test_window_boots_and_refreshes | window + engine + 100 ms refresh loop | PASS |
+| test_joint_command_flow | slider signal → engine → physical convergence | PASS |
+| test_ik_flow_via_panel | IK worker → result label → Move-to-solution | PASS |
+| test_plan_and_execute_flow | plan worker → trajectory worker → executor → completed | PASS |
+| test_scene_switch_flow | in-place scene switching | PASS |
+| test_full_pick_place_via_ui | the ENTIRE pick&place driven through UI signals | PASS |
+
+## Interactive verification (manual, NOT covered by offscreen tests)
+
+The real MuJoCo viewer window and mouse/keyboard interaction were exercised
+during development on this machine (viewer launch, camera orbit, live scene
+switching, start/stop of tasks from the UI). These interactions are
+NOT automated — recorded here explicitly as NOT RUN under automation rather
+than claimed as covered. Screenshots in docs/img/ are real captures.
+
+## Regression history (failures found and fixed during development)
+
+1. Duplicate `home` keyframe in generated scenes (compile error) → removed.
+2. `single_obs` wall intersected the arm at home pose → obstacle moved.
+3. Python-loop nearest-neighbour made RRT 60x slower than needed → vectorized.
+4. Checker flagged the resting cube (table-cube contact) → mode-dependent
+   whitelist.
+5. Trajectory completion froze servo lag; hold-states ratcheted downward
+   under gravity (22 mm) → settle-based completion + static hold targets.
+6. Gripper squeeze too weak (0.25 N) → measured force curve, 20 mm depth.
+7. Finger hull grazed table at edge placements → 10 mm release clearance.
+8. IK benchmark population contained self-colliding ground truths →
+   filtered (94.2% → 100%).
+
+None of these were "fixed" by weakening the tests — the acceptance criteria
+stayed at or above the brief's requirements.

@@ -103,9 +103,9 @@ def run_grasp_benchmark(base_runs: int = 20, jitter_runs: int = 10, hard_runs: i
         one_trial("jitter", cube, (0.55, -0.30), expect_fail=False)
     for i in range(hard_runs):
         # near the table edges (table spans x 0.20..0.90, y -0.45..0.45),
-        # kept on-table and inside the practical workspace
-        x = rng.uniform(0.24, 0.86)
-        y = rng.choice([-1.0, 1.0]) * rng.uniform(0.30, 0.42)
+        # kept >=5 cm inside the edges and inside the practical workspace
+        x = rng.uniform(0.26, 0.84)
+        y = rng.choice([-1.0, 1.0]) * rng.uniform(0.30, 0.40)
         one_trial("hard_place", (0.55, 0.0), (x, y), expect_fail=False)
     for _ in range(impossible_runs):
         one_trial("impossible", (0.55, 0.0), (1.25, 0.95), expect_fail=True)

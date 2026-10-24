@@ -1,31 +1,88 @@
 scenario,planner,seed,success,independently_validated,time_s,path_length_rad,n_waypoints,n_nodes,n_collision_checks,shortcut_reduction_pct,message
-single_obs,linear,102,False,,0.0008379999781027436,0.0,0,2,24,0,"straight-line path in collision: collision at sample 2: left_finger<->table (-0.0020m), left_finger<->table (-0.0004m), left_finger<->table (-0.0009m), left_finger<->table (-0.0001m)"
-single_obs,rrt,102,True,True,2.6565898000262678,5.513890813167878,4,5607,7468,39.91101696937419,path found
-single_obs,rrt_connect,102,True,True,0.22583599999779835,5.764762240239684,5,90,434,36.62908270720722,path found
-single_obs,linear,108,False,,0.0006309999735094607,0.0,0,2,17,0,"straight-line path in collision: collision at sample 1: left_finger<->table (-0.0015m), left_finger<->table (-0.0002m), table<->left_finger (-0.0028m)"
-single_obs,rrt,108,False,,8.00017569999909,0.0,0,14795,19548,0,planning timeout
-single_obs,rrt_connect,108,True,True,0.2843980999896303,9.451002875231316,8,141,589,29.361832545327072,path found
-single_obs,linear,110,False,,0.0015790000325068831,0.0,0,2,54,0,"straight-line path in collision: collision at sample 4: right_finger<->wall_obstacle (-0.0001m), wall_obstacle<->right_finger (-0.0025m)"
-single_obs,rrt,110,False,,7.853217800031416,0.0,0,15233,20002,0,max iterations reached without finding the goal
-single_obs,rrt_connect,110,True,True,0.242447099997662,3.313933342380754,3,17,218,1.9182669407733943,path found
-single_obs,linear,111,False,,0.0006517000147141516,0.0,0,2,17,0,"straight-line path in collision: collision at sample 1: left_finger<->table (-0.0030m), left_finger<->table (-0.0003m), left_finger<->table (-0.0010m), left_finger<->table (-0.0016m)"
-single_obs,rrt,111,False,,8.000483199954033,0.0,0,14863,19784,0,planning timeout
-single_obs,rrt_connect,111,True,True,0.25031059997854754,6.868772529767213,9,191,793,28.950522240501165,path found
-single_obs,linear,112,False,,0.0008351000142283738,0.0,0,2,29,0,straight-line path in collision: collision at sample 2: table<->left_finger (-0.0007m)
-single_obs,rrt,112,False,,7.996078600001056,0.0,0,15067,20002,0,max iterations reached without finding the goal
-single_obs,rrt_connect,112,True,True,0.1672346999985166,5.12477933257018,6,60,344,39.18810004673471,path found
-single_obs,linear,113,False,,0.0005816000048071146,0.0,0,2,16,0,straight-line path in collision: collision at sample 1: right_finger<->cube (-0.0002m)
-single_obs,rrt,113,True,True,4.655905199993867,6.191270720330141,4,9413,12424,49.95589660930191,path found
-single_obs,rrt_connect,113,True,True,0.2370612000231631,5.547806971019854,6,58,358,26.003887462580632,path found
-single_obs,linear,115,False,,0.002113299968186766,0.0,0,2,76,0,"straight-line path in collision: collision at sample 5: wall_obstacle<->hand (-0.0009m), wall_obstacle<->hand (-0.0002m)"
-single_obs,rrt,115,False,,7.850548800022807,0.0,0,15035,20002,0,max iterations reached without finding the goal
-single_obs,rrt_connect,115,True,True,0.3501645000069402,3.319451431879305,3,14,215,5.544131102965755,path found
-single_obs,linear,116,False,,0.0007838000310584903,0.0,0,2,18,0,"straight-line path in collision: collision at sample 1: cube<->hand (-0.0007m), left_finger<->table (-0.0050m), left_finger<->table (-0.0020m), left_finger<->table (-0.0029m)"
-single_obs,rrt,116,False,,7.897244799998589,0.0,0,15205,20002,0,max iterations reached without finding the goal
-single_obs,rrt_connect,116,True,True,0.18815179995726794,7.442235709212954,7,104,486,26.100674979660464,path found
-single_obs,linear,122,True,True,0.0026846000109799206,3.4256675330286077,7,2,99,0,straight line is collision-free
-single_obs,rrt,122,True,True,0.04400090000126511,3.4256675330286077,2,100,128,36.943869726849066,path found
-single_obs,rrt_connect,122,True,True,0.010115800017956644,3.4256675330286077,2,15,19,5.109630951024691,path found
-single_obs,linear,123,False,,0.0007102999952621758,0.0,0,2,18,0,"straight-line path in collision: collision at sample 1: left_finger<->table (-0.0018m), left_finger<->table (-0.0005m), table<->left_finger (-0.0031m)"
-single_obs,rrt,123,False,,7.804253600013908,0.0,0,15033,20002,0,max iterations reached without finding the goal
-single_obs,rrt_connect,123,True,True,0.29775240004528314,6.607085222874535,6,199,811,39.80199343495963,path found
+single_obs,linear,100,True,True,0.002854699967429042,3.606702825905124,7,2,99,0,straight line is collision-free
+single_obs,rrt,100,True,True,0.06420230004005134,3.6067028259051246,2,147,183,38.69975605192211,path found
+single_obs,rrt_connect,100,True,True,0.013406199985183775,3.6067028259051246,2,18,25,8.44424481881233,path found
+single_obs,linear,101,True,True,0.0025174000184051692,3.4329024322650747,7,2,99,0,straight line is collision-free
+single_obs,rrt,101,False,,8.000484200019855,0.0,0,14633,19202,0,planning timeout
+single_obs,rrt_connect,101,True,True,0.006768299965187907,3.4329024322650747,2,14,16,4.469804662459353,path found
+single_obs,linear,102,False,,0.0009397999965585768,0.0,0,2,24,0,"straight-line path in collision: collision at sample 2: left_finger<->table (-0.0031m), left_finger<->table (-0.0008m), left_finger<->table (-0.0015m), left_finger<->table (-0.0020m)"
+single_obs,rrt,102,True,True,2.618262500036508,6.28147851205925,4,5616,7468,40.73285359945006,path found
+single_obs,rrt_connect,102,True,True,0.19572250003693625,6.286902587622165,7,85,426,29.642327920224066,path found
+single_obs,linear,103,False,,0.0012398000108078122,0.0,0,2,28,0,straight-line path in collision: collision at sample 2: wall_obstacle<->hand (-0.0033m)
+single_obs,rrt,103,False,,7.860110299952794,0.0,0,15057,20002,0,max iterations reached without finding the goal
+single_obs,rrt_connect,103,True,True,0.15955880004912615,2.998723036950531,4,21,237,25.666025842797236,path found
+single_obs,linear,104,False,,0.0013419999741017818,0.0,0,2,47,0,"straight-line path in collision: collision at sample 3: right_finger<->wall_obstacle (-0.0012m), right_finger<->wall_obstacle (-0.0023m), right_finger<->wall_obstacle (-0.0009m)"
+single_obs,rrt,104,True,True,3.209493800008204,4.136119109768305,3,6622,8683,48.310814003706305,path found
+single_obs,rrt_connect,104,True,True,0.15501829999266192,3.1290235920607032,4,27,253,47.18067364464852,path found
+single_obs,linear,105,True,True,0.002862100023776293,3.4011743704850343,7,2,99,0,straight line is collision-free
+single_obs,rrt,105,True,True,0.02255729999160394,3.401174370485035,2,38,57,18.128311578341084,path found
+single_obs,rrt_connect,105,True,True,0.01386940001975745,3.401174370485035,2,17,32,9.862244143428144,path found
+single_obs,linear,106,True,True,0.0027292000013403594,3.3911888227656304,7,2,99,0,straight line is collision-free
+single_obs,rrt,106,True,True,0.6577769999857992,3.391188822765631,2,1609,2038,25.23636418223886,path found
+single_obs,rrt_connect,106,True,True,0.011824199988041073,3.391188822765631,2,15,25,6.36920161920933,path found
+single_obs,linear,107,False,,0.0013758999994024634,0.0,0,2,47,0,straight-line path in collision: collision at sample 3: left_finger<->wall_obstacle (-0.0002m)
+single_obs,rrt,107,False,,7.956435400003102,0.0,0,15107,20002,0,max iterations reached without finding the goal
+single_obs,rrt_connect,107,True,True,0.26634470000863075,4.920739564643438,4,42,290,36.6369366878889,path found
+single_obs,linear,108,False,,0.0006458000279963017,0.0,0,2,18,0,"straight-line path in collision: collision at sample 1: left_finger<->table (-0.0016m), left_finger<->table (-0.0002m), table<->left_finger (-0.0029m)"
+single_obs,rrt,108,False,,7.846084199962206,0.0,0,15101,20002,0,max iterations reached without finding the goal
+single_obs,rrt_connect,108,True,True,0.231315299984999,7.809977554950398,7,109,499,32.686906933648096,path found
+single_obs,linear,110,False,,0.0017325000371783972,0.0,0,2,53,0,straight-line path in collision: collision at sample 4: wall_obstacle<->right_finger (-0.0000m)
+single_obs,rrt,110,False,,7.8471250999718904,0.0,0,15232,20002,0,max iterations reached without finding the goal
+single_obs,rrt_connect,110,True,True,0.24737229995662346,3.314809487551146,3,17,218,1.9486889703804633,path found
+single_obs,linear,111,False,,0.0013758999994024634,0.0,0,2,40,0,"straight-line path in collision: collision at sample 3: left_finger<->wall_obstacle (-0.0005m), wall_obstacle<->left_finger (-0.0032m), wall_obstacle<->left_finger (-0.0031m)"
+single_obs,rrt,111,True,True,0.21967289998428896,3.0171639444535963,3,82,339,43.32051210432063,path found
+single_obs,rrt_connect,111,True,True,0.12666730000637472,2.8880154807348495,4,22,236,41.33309702854534,path found
+single_obs,linear,112,False,,0.0010118000209331512,0.0,0,2,29,0,"straight-line path in collision: collision at sample 2: left_finger<->table (-0.0006m), table<->left_finger (-0.0016m)"
+single_obs,rrt,112,False,,7.857767700043041,0.0,0,15074,20002,0,max iterations reached without finding the goal
+single_obs,rrt_connect,112,True,True,0.15156129997922108,5.1254709093596205,6,60,344,39.18833162144547,path found
+single_obs,linear,113,False,,0.000707999977748841,0.0,0,2,16,0,"straight-line path in collision: collision at sample 1: right_finger<->cube (-0.0002m), right_finger<->cube (-0.0001m), right_finger<->cube (-0.0002m)"
+single_obs,rrt,113,False,,8.000273299985565,0.0,0,14743,19480,0,planning timeout
+single_obs,rrt_connect,113,True,True,0.22679490002337843,6.822476118449547,6,72,396,23.132270856745208,path found
+single_obs,linear,114,False,,0.002228399971500039,0.0,0,2,86,0,"straight-line path in collision: collision at sample 6: wall_obstacle<->hand (-0.0006m), wall_obstacle<->hand (-0.0000m)"
+single_obs,rrt,114,True,True,1.5938676999649033,3.533366982567263,3,2783,3884,30.413310938715167,path found
+single_obs,rrt_connect,114,True,True,0.4046789000276476,3.755107700794397,3,18,223,5.0802381611555925,path found
+single_obs,linear,115,False,,0.001986199989914894,0.0,0,2,77,0,"straight-line path in collision: collision at sample 5: wall_obstacle<->hand (-0.0032m), wall_obstacle<->hand (-0.0026m)"
+single_obs,rrt,115,False,,7.78729879995808,0.0,0,15037,20002,0,max iterations reached without finding the goal
+single_obs,rrt_connect,115,True,True,0.36098579998360947,3.3398281757996355,3,14,215,5.460946317529514,path found
+single_obs,linear,116,False,,0.000673100003041327,0.0,0,2,18,0,"straight-line path in collision: collision at sample 1: left_finger<->table (-0.0022m), left_finger<->table (-0.0002m), left_finger<->table (-0.0008m), table<->left_finger (-0.0035m)"
+single_obs,rrt,116,False,,8.00025879999157,0.0,0,15163,19941,0,planning timeout
+single_obs,rrt_connect,116,True,True,0.20244410005398095,7.267920352942795,6,107,489,30.247288878768032,path found
+single_obs,linear,117,False,,0.0006913999677635729,0.0,0,2,18,0,straight-line path in collision: collision at sample 1: table<->left_finger (-0.0010m)
+single_obs,rrt,117,True,True,4.00424620002741,5.4538556645617025,4,8128,10653,37.28035291729035,path found
+single_obs,rrt_connect,117,True,True,0.33741599996574223,6.029398601102111,6,231,830,44.2079071890538,path found
+single_obs,linear,118,False,,0.0006924999761395156,0.0,0,2,16,0,"straight-line path in collision: collision at sample 1: cube<->hand (-0.0013m), left_finger<->table (-0.0041m), left_finger<->table (-0.0016m), left_finger<->table (-0.0021m)"
+single_obs,rrt,118,True,True,3.999414599966258,5.44976077533369,4,8175,10872,35.88673020989811,path found
+single_obs,rrt_connect,118,True,True,0.28108220000285655,9.724347016450377,8,168,708,28.795476274504118,path found
+single_obs,linear,119,False,,0.0016219000099226832,0.0,0,2,53,0,"straight-line path in collision: collision at sample 4: right_finger<->wall_obstacle (-0.0040m), right_finger<->wall_obstacle (-0.0011m), right_finger<->wall_obstacle (-0.0052m), right_finger<->wall_obstacle (-0.0038m)"
+single_obs,rrt,119,True,True,0.6332307999837212,6.075683322130137,4,1142,1606,40.75410410334521,path found
+single_obs,rrt_connect,119,True,True,0.26048250001622364,3.0577090597781194,3,18,227,14.82385197431013,path found
+single_obs,linear,120,False,,0.001080599962733686,0.0,0,2,30,0,straight-line path in collision: collision at sample 2: wall_obstacle<->hand (-0.0049m)
+single_obs,rrt,120,False,,8.000182099989615,0.0,0,12722,16737,0,planning timeout
+single_obs,rrt_connect,120,True,True,0.1475924999685958,2.8145456719146864,4,26,244,26.064011007052923,path found
+single_obs,linear,121,False,,0.0007310000364668667,0.0,0,2,17,0,"straight-line path in collision: collision at sample 1: cube<->hand (-0.0022m), left_finger<->table (-0.0052m), left_finger<->table (-0.0026m), left_finger<->table (-0.0005m)"
+single_obs,rrt,121,False,,8.000050199974794,0.0,0,14612,19151,0,planning timeout
+single_obs,rrt_connect,121,True,True,0.2023266000323929,8.32034596647857,7,128,560,25.14820081463478,path found
+single_obs,linear,122,True,True,0.002535899984650314,3.323184680807671,7,2,99,0,straight line is collision-free
+single_obs,rrt,122,True,True,0.04055409994907677,3.3231846808076715,2,95,122,34.60331222525905,path found
+single_obs,rrt_connect,122,True,True,0.010235499998088926,3.3231846808076715,2,14,18,5.107108220534173,path found
+single_obs,linear,123,False,,0.0006848999764770269,0.0,0,2,18,0,"straight-line path in collision: collision at sample 1: left_finger<->table (-0.0010m), table<->left_finger (-0.0023m)"
+single_obs,rrt,123,False,,8.000396899995394,0.0,0,14023,18654,0,planning timeout
+single_obs,rrt_connect,123,True,True,0.400488100014627,6.6069926652276045,6,199,811,39.80016749681524,path found
+single_obs,linear,124,False,,0.0010028999531641603,0.0,0,2,31,0,"straight-line path in collision: collision at sample 2: wall_obstacle<->hand (-0.0016m), wall_obstacle<->hand (-0.0014m)"
+single_obs,rrt,124,False,,8.000077300006524,0.0,0,14417,19039,0,planning timeout
+single_obs,rrt_connect,124,True,True,0.13763720000861213,2.925510048455086,4,30,259,32.0412008189111,path found
+single_obs,linear,125,True,True,0.0030601000180467963,3.53524849933705,7,2,99,0,straight line is collision-free
+single_obs,rrt,125,False,,8.000475800014101,0.0,0,13875,18391,0,planning timeout
+single_obs,rrt_connect,125,True,True,0.012997800018638372,3.53524849933705,2,16,25,7.184410367090588,path found
+single_obs,linear,126,False,,0.002155099995434284,0.0,0,2,83,0,"straight-line path in collision: collision at sample 5: wall_obstacle<->hand (-0.0039m), wall_obstacle<->hand (-0.0032m)"
+single_obs,rrt,126,False,,8.001219699974172,0.0,0,13942,18407,0,planning timeout
+single_obs,rrt_connect,126,True,True,0.26496090000728145,3.5122147958669343,4,25,239,12.331858163583432,path found
+single_obs,linear,127,True,True,0.004216999979689717,3.511293090256769,8,2,101,0,straight line is collision-free
+single_obs,rrt,127,True,True,0.07113460003165528,3.511293090256769,2,68,103,15.026290469100555,path found
+single_obs,rrt_connect,127,True,True,0.029989600006956607,3.511293090256769,2,15,19,6.266705810845119,path found
+single_obs,linear,128,True,True,0.002828199998475611,3.423030238698372,7,2,99,0,straight line is collision-free
+single_obs,rrt,128,True,True,2.0804548999876715,3.423030238698372,2,4727,6003,33.219289407015204,path found
+single_obs,rrt_connect,128,True,True,0.009209099982399493,3.423030238698372,2,14,16,2.706806602985623,path found
+single_obs,linear,129,False,,0.0007809999515302479,0.0,0,2,16,0,straight-line path in collision: collision at sample 1: right_finger<->cube (-0.0006m)
+single_obs,rrt,129,False,,8.00055880000582,0.0,0,14665,19545,0,planning timeout
+single_obs,rrt_connect,129,True,True,0.18921620002947748,7.056002270219159,7,111,497,37.89272436118324,path found

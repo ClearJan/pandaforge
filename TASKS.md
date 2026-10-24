@@ -18,42 +18,42 @@ or report path). This file is updated as work progresses, never pre-filled.
 
 | Task | Owner | Status | Evidence |
 |---|---|---|---|
-| FK via hand body + Jacobian frame convention verified by finite differences | Kinematics | PENDING | — |
-| DLS IK (adaptive damping, nullspace bias, multi-start, limits, NaN guards) | Kinematics | PENDING | — |
-| IK acceptance: ≥95% on ≥100 FK-generated reachable poses, ≤10 mm / ≤5° | Kinematics | PENDING | — |
+| FK via hand body + Jacobian frame convention verified by finite differences | Kinematics | DONE | `tests/unit/test_kinematics.py` (FD match < 1e-4) |
+| DLS IK (adaptive damping, nullspace bias, multi-start, limits, NaN guards) | Kinematics | DONE | `tests/unit/test_ik.py` + `reports/benchmarks/ik_benchmark.json` |
+| IK acceptance: ≥95% on ≥100 FK-generated reachable poses, ≤10 mm / ≤5° | Kinematics | DONE | 100% on 120 valid samples, max 5.0 mm / 2.8°, 0 false positives (`reports/benchmarks/ik_benchmark.json`) |
 
 ## Phase 2 — Collision & Planning
 
 | Task | Owner | Status | Evidence |
 |---|---|---|---|
-| Whitelist collision checker with shadow MjData; vs-mj_forward parity test | Planning | PENDING | — |
-| Mid-segment penetration detection (dense interpolation) | Planning | PENDING | — |
-| RRT + RRT-Connect + linear baseline, unified API | Planning | PENDING | — |
-| Shortcutting with independent re-validation | Planning | PENDING | — |
-| Benchmark: 3 scenarios × 30 seeds × 3 planners | QA | PENDING | — |
+| Whitelist collision checker with shadow MjData; vs-mj_forward parity test | Planning | DONE | `tests/unit/test_collision.py` |
+| Mid-segment penetration detection (dense interpolation) | Planning | DONE | `tests/unit/test_collision.py::test_mid_segment_penetration_caught` |
+| RRT + RRT-Connect + linear baseline, unified API | Planning | DONE | `tests/unit/test_planners.py` |
+| Shortcutting with independent re-validation | Planning | DONE | `tests/unit/test_planners.py::test_shortcut_reduces_length` |
+| Benchmark: 3 scenarios × ~30 seeds × 3 planners | QA | DONE | `reports/benchmarks/planning_*.csv`, `reports/BENCHMARKS.md` |
 
 ## Phase 3 — Trajectory
 
 | Task | Owner | Status | Evidence |
 |---|---|---|---|
-| Time-scaled cubic spline generator with numeric limit verification | Trajectory | PENDING | — |
-| Executor refuses infeasible trajectories; tracks errors | Control | PENDING | — |
-| Real physics execution incl. pause / estop / completion | Control | PENDING | — |
+| Time-scaled cubic spline generator with numeric limit verification | Trajectory | DONE | `tests/unit/test_trajectory.py` |
+| Executor refuses infeasible trajectories; settle-based completion criterion | Control | DONE | `tests/integration/test_execution.py` |
+| Real physics execution incl. e-stop freeze / completion | Control | DONE | `tests/integration/test_execution.py::test_estop_freezes_motion` |
 
 ## Phase 4 — Grasping
 
 | Task | Owner | Status | Evidence |
 |---|---|---|---|
-| Grasp pose computation (top-down, cube frame) | Manipulation | PENDING | — |
-| 15-state FSM with timeouts / failure / abort | Manipulation | PENDING | — |
-| End-to-end physical pick&place ≥18/20 on base scenario | Manipulation | PENDING | — |
+| Grasp pose computation (top-down, measured pad/palm geometry) | Manipulation | DONE | `src/robotstudio/manipulation/grasp.py`, physics tests |
+| 15-state FSM with timeouts / retry / abort | Manipulation | DONE | `tests/physics/test_grasp_fsm.py` |
+| End-to-end physical pick&place ≥18/20 on base scenario | Manipulation | DONE | `reports/benchmarks/grasp_summary.json` (base 20/20) |
 
 ## Phase 5 — Desktop UI
 
 | Task | Owner | Status | Evidence |
 |---|---|---|---|
-| Main window + 6 panels, all buttons wired to engine commands | UI | PENDING | — |
-| Non-blocking planning (worker threads), clean shutdown | UI | PENDING | — |
+| Main window + 6 panels, all buttons wired to engine commands | UI | DONE | `tests/gui/test_ui_smoke.py` (offscreen) |
+| Non-blocking planning (worker threads), clean shutdown | UI | DONE | `tests/gui/test_ui_smoke.py`, `closeEvent` wiring |
 
 ## Phase 6 — QA & Benchmarks
 

@@ -51,7 +51,10 @@ def pregrasp_pose(cube_center: np.ndarray, cube_half: float) -> Pose:
     return Pose.make(g.pos + [0.0, 0.0, PREGRASP_CLEARANCE], g.quat_wxyz)
 
 
-RELEASE_CLEARANCE = 0.004  # cube bottom hover above the surface at release (m)
+RELEASE_CLEARANCE = 0.010  # cube bottom hover above the surface at release (m)
+# 10 mm: leaves margin for servo tracking error so the (convex-hull) finger
+# meshes cannot graze the table at low edge positions; the cube free-falls
+# the clearance and settles - verified stable in grasp trials.
 
 
 def place_pose(place_target: np.ndarray, cube_half: float, surface_z: float) -> Pose:

@@ -34,9 +34,22 @@ class ExecutionStats:
 
 
 class TrajectoryExecutor:
-    """Controller that follows a :class:`Trajectory` in real simulation time."""
+    """Controller that follows a :class:`Trajectory` in real simulation time.
 
-    def __init__(self, trajectory: Trajectory, limits: TrajectoryLimits | None = None) -> None:
+    Completion semantics: the trajectory is DONE only when (a) the time
+    parameterization has played out AND (b) the physical arm has converged to
+    within ``settle_tol`` radians of the final waypoint (checked every step,
+    ``settle_timeout`` budget). Without (b), states downstream would hold the
+    lagging actual configuration and freeze servo error mid-motion.
+    """
+
+    def __init__(
+        self,
+        trajectory: Trajectory,
+        limits: TrajectoryLimits | None = None,
+        settle_tol: float = 0.03,
+        settle_timeout: float = 2.0,
+    ) -> None:
         limits = limits or trajectory.limits
         v_ratio, a_ratio = trajectory.constraint_violation()
         if v_ratio > 1.0 or a_ratio > 1.0:
@@ -47,10 +60,18 @@ class TrajectoryExecutor:
         self.start_time: float | None = None
         self.status_text = "trajectory ready"
         self.stats = ExecutionStats(duration=trajectory.duration)
+        self.settle_tol = settle_tol
+        self.settle_timeout = settle_timeout
+        self._settle_elapsed = 0.0
         self._err_sq_sum = 0.0
         self._err_n = 0
 
     # ------------------------------------------------------------------ #
+    @property
+    def final_target(self) -> np.ndarray:
+        """The trajectory's final waypoint (the static hold target)."""
+        return self.trajectory.sample(self.trajectory.duration)
+
     def update(self, ctx: EngineContext, dt: float) -> np.ndarray:
         if self.start_time is None:
             self.start_time = ctx.time
@@ -60,11 +81,21 @@ class TrajectoryExecutor:
         if t >= self.trajectory.duration:
             q_final = self.trajectory.sample(self.trajectory.duration)
             self._record(ctx, q_final)
-            if not self.stats.finished:
-                self.stats.finished = True
-                self.stats.success = True
-                self.stats.executed_time = self.trajectory.duration
-                self.status_text = "completed"
+            settle_err = float(np.max(np.abs(q_final - ctx.arm_q)))
+            self._settle_elapsed += dt
+            if settle_err <= self.settle_tol:
+                if not self.stats.finished:
+                    self.stats.finished = True
+                    self.stats.success = True
+                    self.stats.executed_time = self.trajectory.duration
+                    self.status_text = "completed"
+            elif self._settle_elapsed > self.settle_timeout:
+                if not self.stats.finished:
+                    self.stats.finished = True
+                    self.stats.success = False
+                    self.status_text = f"did not settle (err {settle_err:.3f} rad)"
+            else:
+                self.status_text = f"settling ({settle_err:.3f} rad to go)"
             return q_final
 
         q_ref = self.trajectory.sample(t)
