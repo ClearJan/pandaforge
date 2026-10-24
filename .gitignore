@@ -28,3 +28,4 @@ reports/tmp/
 # OS
 Thumbs.db
 .DS_Store
+*.spec
