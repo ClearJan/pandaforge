@@ -43,7 +43,7 @@ echo [setup] regenerating preset scene files...
 ".venv\Scripts\python.exe" -c "from robotstudio.simulation.scenes import ensure_preset_scene_files; print(len(ensure_preset_scene_files()), 'scenes written')"
 
 echo [setup] running a 5-second headless self-check...
-".venv\Scripts\python.exe" -c "import mujoco, numpy; from robotstudio.simulation.scenes import preset_scenes, write_scene_file; m = mujoco.MjModel.from_xml_path(str(write_scene_file(preset_scenes()['tabletop']))); d = mujoco.MjData(m); [mujoco.mj_step(m, d) for _ in range(500)]; print('self-check OK: nq=%d nu=%d' % (m.nq, m.nu))"
+".venv\Scripts\python.exe" -c "import mujoco, numpy; from robotstudio.simulation.scenes import preset_scenes, write_scene_file; m = mujoco.MjModel.from_xml_path(str(write_scene_file(preset_scenes()['tabletop']))); d = mujoco.MjData(m); [mujoco.mj_step(m, d) for _ in range(500)]; print(f'self-check OK: nq={m.nq} nu={m.nu} time={d.time}')"
 if errorlevel 1 (
     echo [setup] ERROR: self-check failed.
     exit /b 1
