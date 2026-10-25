@@ -68,8 +68,12 @@ def test_guarded_execution_replans_and_completes():
         guarded = GuardedExecutor(eng, traj)
         eng.set_controller(guarded)
 
+        # generous wall budget: the criteria (zero contacts, replans,
+        # success) are strict, but under heavy machine load the 3x-realtime
+        # stepping can lag wall-clock - observed as a one-off flake when the
+        # full suite ran right after a PyInstaller build.
         t0 = time.perf_counter()
-        while time.perf_counter() - t0 < 120.0 and not guarded.stats.completed:
+        while time.perf_counter() - t0 < 240.0 and not guarded.stats.completed:
             time.sleep(0.1)
 
         st = guarded.stats

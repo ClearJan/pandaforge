@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.6.1 — 2026-10-25
+
+### Test hardening
+- The guarded-replan integration test observed a one-off wall-clock flake
+  when the full suite ran immediately after a PyInstaller build (3x
+  realtime stepping lags under load). Its wall budget doubled (240 s);
+  every acceptance criterion (zero contacts, replans, success, goal error)
+  is unchanged. 11 consecutive clean re-runs after the fix.
+
 ## 1.6.0 — 2026-10-25
 
 ### Fixed
