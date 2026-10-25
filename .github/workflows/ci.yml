@@ -37,10 +37,22 @@ jobs:
       - name: Regenerate scene files
         run: python -c "from robotstudio.simulation.scenes import ensure_preset_scene_files; ensure_preset_scene_files()"
 
-      - name: Run test suite (offscreen Qt)
+      - name: Run GUI tests (offscreen Qt)
+        id: gui
         env:
           QT_QPA_PLATFORM: offscreen
-        run: python -m pytest tests -q --timeout 300
+        run: python -m pytest tests/gui -q --timeout 300
+
+      - name: Run integration + physics tests
+        if: always() && steps.gui.outcome == 'success'
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest tests/integration tests/physics -q --timeout 300
+
+      - name: Run unit tests
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python -m pytest tests/unit -q --timeout 300
 
   build:
     runs-on: windows-latest
