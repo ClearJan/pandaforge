@@ -2,9 +2,10 @@
 
 > Python package name: `robotstudio` (import name kept for compatibility).
 
-[![CI](https://github.com/YOUR_GITHUB_USERNAME/pandaforge/actions/workflows/ci.yml/badge.svg)](https://github.com/YOUR_GITHUB_USERNAME/pandaforge/actions/workflows/ci.yml)
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Tests](https://img.shields.io/badge/tests-75%20passed-brightgreen.svg)](reports/TEST_REPORT.md)
 
 PandaForge is a desktop application for **interactive robot motion planning,
 simulation and physical manipulation** built on MuJoCo and the Franka Emika
@@ -104,21 +105,30 @@ load robot -> configure scene -> set target -> solve IK -> collision check
 ## Installation (Windows)
 
 ```bat
-git clone https://github.com/YOUR_GITHUB_USERNAME/pandaforge
+git clone <this-repository-url>
 cd pandaforge
 setup.cmd        :: creates .venv, installs pinned deps, self-check
 run.cmd          :: launches the desktop app (control panel + MuJoCo viewer)
 ```
 
+Replace `<this-repository-url>` with your clone URL (the badges above are
+relative and work from any fork).
+
 Requirements: Windows 10/11, Python 3.11+ on PATH, ~2 GB disk. No GPU, ROS,
 WSL or cloud services needed; after `setup.cmd` the project runs fully
 offline.
 
-**Linux/macOS:** `python -m venv .venv && .venv/bin/pip install -r
-requirements-lock.txt && .venv/bin/pip install -e . --no-deps`, then
-`python -m robotstudio` (display) or `python -m robotstudio.demo`
-(headless). CI runs the full suite on both `windows-latest` and
-`ubuntu-latest`.
+**Linux/macOS:**
+
+```bash
+python -m venv .venv && .venv/bin/pip install -r requirements.txt && .venv/bin/pip install -e . --no-deps
+.venv/bin/python -m robotstudio.demo      # headless proof, no display needed
+.venv/bin/python -m robotstudio           # full desktop app
+```
+
+(`requirements.txt` = verified ranges; `requirements-lock.txt` reproduces
+the exact benchmark environment. CI runs the full suite on both
+`windows-latest` and `ubuntu-latest`.)
 
 ## Usage walkthrough
 
@@ -193,6 +203,14 @@ All numbers from real runs (raw data in
   CI, but the desktop launch scripts are Windows-only.
 - Single-tree optimal planners (RRT\*) trade first-solution speed for
   optimality on blocked 7-D scenes — measured, reported, not tuned away.
+
+## Contributing
+
+Bug reports, algorithm work, and UI improvements are welcome — read
+[CONTRIBUTING.md](CONTRIBUTING.md) for the project's ground rules
+(single-owner engine, no Qt in planners, evidence required for every
+claim). Security topics: [SECURITY.md](SECURITY.md). If you use PandaForge
+in your work, cite it via [CITATION.cff](CITATION.cff).
 
 ## License
 

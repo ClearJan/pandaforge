@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 — 2026-10-25
+
+### Open-source readiness
+- Community kit: CONTRIBUTING.md (project rules for contributors), SECURITY
+  policy, Code of Conduct, CITATION.cff, GitHub issue/PR templates.
+- `requirements.txt` flexible install path for non-Windows reviewers
+  (ranges) alongside the locked benchmark environment.
+- README: relative CI badge (fork-friendly), Linux quickstart promoted to a
+  first-class block.
+
 ## 1.3.1 — 2026-10-25
 
 ### Repository hygiene (open-source readiness)
