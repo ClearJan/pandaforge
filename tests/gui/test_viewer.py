@@ -54,7 +54,10 @@ def test_real_viewer_launch_and_close(tabletop):
 
 def test_viewer_handle_wrapper_launches(tabletop):
     """The RobotStudio wrapper launches the real window (show=True)."""
+    import os
 
+    if os.environ.get("PANDAFORGE_REAL_VIEWER") != "1":
+        pytest.skip("real-viewer test is opt-in (PANDAFORGE_REAL_VIEWER=1)")
     from robotstudio.simulation.viewer import ViewerHandle
 
     model, data, _robot = tabletop
