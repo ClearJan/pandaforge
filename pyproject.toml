@@ -59,6 +59,8 @@ ignore = [
 "src/robotstudio/planning/rrt.py" = ["N806"]
 "src/robotstudio/collision/checker.py" = ["N806"]
 "src/robotstudio/manipulation/fsm.py" = ["N806"]
+"src/robotstudio/planning/rrt_star.py" = ["N806"]
+"src/robotstudio/simulation/engine.py" = ["N806"]
 "tests/*" = ["N802", "N803", "N806"]
 # Qt overrides use Qt's camelCase names.
 "src/robotstudio/ui/*" = ["N802"]

@@ -26,14 +26,20 @@ _TREE_CAPACITY = 50000
 
 
 class _Tree:
-    """Flat preallocated tree with vectorized nearest-neighbour queries."""
+    """Flat preallocated tree with vectorized nearest-neighbour queries.
 
-    __slots__ = ("points", "parents", "n")
+    Also maintains root-path costs and child adjacency so optimal planners
+    (RRT*) can rewire and propagate subtree cost changes incrementally.
+    """
+
+    __slots__ = ("points", "parents", "n", "costs", "_children")
 
     def __init__(self, root: np.ndarray) -> None:
         self.points = np.empty((_TREE_CAPACITY, root.shape[0]))
         self.points[0] = root
         self.parents = np.full(_TREE_CAPACITY, -1, dtype=np.int64)
+        self.costs = np.zeros(_TREE_CAPACITY)
+        self._children: list[list[int]] = [[] for _ in range(_TREE_CAPACITY)]
         self.n = 1
 
     def add(self, q: np.ndarray, parent: int) -> int:
@@ -42,12 +48,42 @@ class _Tree:
         idx = self.n
         self.points[idx] = q
         self.parents[idx] = parent
+        self.costs[idx] = self.costs[parent] + float(np.linalg.norm(q - self.points[parent]))
+        self._children[parent].append(idx)
         self.n += 1
         return idx
 
     def nearest(self, target: np.ndarray) -> int:
         d = self.points[: self.n] - target
         return int(np.argmin(np.einsum("ij,ij->i", d, d)))
+
+    def near(self, target: np.ndarray, k: int) -> np.ndarray:
+        """Indices of the k nearest nodes (unordered)."""
+        d2 = np.einsum("ij,ij->i", self.points[: self.n] - target, self.points[: self.n] - target)
+        k = min(k, self.n)
+        return np.argpartition(d2, k - 1)[:k]
+
+    def set_parent(self, node: int, new_parent: int) -> None:
+        """Rewire ``node`` under ``new_parent`` and update subtree costs."""
+        old = int(self.parents[node])
+        if old == new_parent:
+            return
+        delta = (
+            self.costs[new_parent]
+            + float(np.linalg.norm(self.points[new_parent] - self.points[node]))
+            - self.costs[node]
+        )
+        self.parents[node] = new_parent
+        self._children[old].remove(node)
+        self._children[new_parent].append(node)
+        stack = [node]
+        while stack:
+            c = stack.pop()
+            self.costs[c] += delta
+            stack.extend(self._children[c])
+
+    def cost_of(self, idx: int) -> float:
+        return float(self.costs[idx])
 
     def path_to(self, idx: int) -> list[np.ndarray]:
         out = []

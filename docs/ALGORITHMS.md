@@ -142,6 +142,34 @@ Zero successful paths failed the independent re-validation (261 trials).
 Single-tree RRT's weakness in 7-D narrow passages is a known property of the
 algorithm and is reported honestly rather than tuned away.
 
+## 7b. Optimal planners: RRT* and Informed RRT* (`planning/rrt_star.py`)
+
+**RRT\*** (Karaman & Frazzoli, IJRR 2011 - k-nearest variant): same growth
+loop as RRT plus, per iteration: (1) parent selection among the k(n) nearest
+neighbours minimizing root-path cost through a collision-free segment, and
+(2) rewiring those neighbours through the new node when cheaper, with the
+cost delta propagated to the affected subtree (child-adjacency walk). The
+connection bound is k(n) = ceil(e·(1+1/d)·ln n), d=7, which caps
+per-iteration collision checks - critical at 0.05 ms/check.
+
+**Informed RRT\*** (Gammell et al., IROS 2014): once a first solution of
+cost cbest exists, all samples are drawn directly from the prolate
+hyperspheroid (ellipsoid) that exactly contains all states able to improve
+the current best path: centre = (start+goal)/2, major axis cbest/2 along the
+start→goal direction (SVD-derived rotation), minor axes
+sqrt(cbest²-cmin²)/2. Rejection handles joint-limit clipping. Convergence
+toward the optimum therefore accelerates as cbest shrinks.
+
+Both record best-cost-per-iteration (`stats["cost_history"]`) for honest
+convergence benchmarking, and report raw path length separately from the
+shortcut post-processing (`stats["raw_path_length"]`).
+
+Measured behaviour (reports/BENCHMARKS.md §6): on solvable tasks RRT\* raw
+paths are consistently shorter than RRT's and Informed RRT\* converges
+faster; on the blocked 7-D scene single-tree optimal search rarely finds a
+first solution within a 20 s budget - the classic feasibility/optimality
+trade-off against RRT-Connect, reported as measured, not tuned away.
+
 ## 8. Trajectory time parameterization (`trajectory/timing.py`)
 
 Method: **time-scaled cubic spline**.

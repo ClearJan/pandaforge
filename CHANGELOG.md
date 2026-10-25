@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.1.0 — 2026-10-25
+
+### Algorithms
+- RRT\* (k-nearest, Karaman & Frazzoli 2011) and Informed RRT\*
+  (Gammell et al. 2014) with per-iteration cost history and raw-vs-shortcut
+  path reporting; quality/convergence benchmark + charts.
+- Tree storage upgraded with incremental rewiring (cost propagation).
+
+### Visualization & UX
+- 3D view draws the planned path (green capsules), the live end-effector
+  trace (cyan) and grasp contact points (red) via the viewer user scene.
+- Toolbar: one-click Showcase (obstacle sweep + full pick & place),
+  E-STOP, Reset, Pause; global typography and QSS polish.
+- Engine protocol fixes found by the new tests: controllers may opt into
+  surviving scene switches; e-stop notifies controllers via callback.
+
+### Tests
+- 64 tests (was 55): +5 RRT\* properties (incl. exact ellipsoid-membership
+  check), +4 showcase/decoration tests.
+
 ## 1.0.0 — 2026-10-25
 
 First complete release (P0 + P1 scope).

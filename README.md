@@ -30,9 +30,14 @@ load robot -> configure scene -> set target -> solve IK -> collision check
 - **IK solver**: damped least squares with adaptive damping, nullspace bias,
   multi-start and collision validation. Failures are reported with reasons —
   never silently converted into a wrong pose.
-- **Planning**: RRT-Connect, RRT, and a straight-line baseline behind one
-  unified API; randomized shortcutting; every reported path is re-validated
-  by an independent collision checker.
+- **Planning**: RRT-Connect, RRT, RRT\*, Informed RRT\* and a straight-line
+  baseline behind one unified API; randomized shortcutting; every reported
+  path is re-validated by an independent collision checker; planned paths,
+  the live end-effector trace and grasp contact points are drawn **in the 3D
+  view** (green path capsules, cyan trace, red contacts).
+- **One-click Showcase**: a toolbar button that runs the whole story -
+  obstacle-scene sweep around a wall, then the full automatic pick & place -
+  for demos and screen recording.
 - **Trajectory execution**: time-scaled cubic splines numerically verified
   against joint velocity/acceleration limits; servo-streamed into the
   physics; settle-based completion; e-stop.
@@ -84,7 +89,7 @@ offline.
    **Start Pick & Place**; the state-machine list highlights each phase as
    the robot physically grasps and places the cube.
 
-Automated tests: `test.cmd` (51 tests: unit, integration, physics, GUI).
+Automated tests: `test.cmd` (64 tests: unit, integration, physics, GUI incl. real-viewer and showcase runs).
 
 ## Benchmarks
 
@@ -96,6 +101,7 @@ All numbers from real runs on this machine (raw data in
 |---|---|
 | IK (120 FK-derived reachable targets) | 100% solved, ≤ 5.0 mm / ≤ 2.8°, mean 9.9 ms, 0 false positives on 20 unreachable targets |
 | Planning (3 scenes × 28-30 seeds × 3 planners) | RRT-Connect 100% everywhere (median 0.19–0.23 s); single-tree RRT 45–47% on blocked scenes; **0 of the 178 produced paths failed independent re-validation (261 trials)** |
+| Optimal planning (RRT\* / Informed RRT\*, 20 s budget) | raw path costs consistently ≤ RRT's; Informed converges faster (see §6 + convergence chart) |
 | Pick & place (35 physical trials) | base 20/20, jittered 10/10, table-edge 5/5; 3/3 impossible targets correctly rejected |
 | Collision check cost | 0.052 ms per state |
 

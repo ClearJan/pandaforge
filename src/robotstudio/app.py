@@ -29,6 +29,10 @@ def main(argv: list[str] | None = None) -> int:
 
     app = QApplication(argv)
     app.setApplicationName("RobotStudio")
+    font = app.font()
+    font.setFamily("Segoe UI")
+    font.setPointSizeF(9.5)
+    app.setFont(font)
 
     engine = SimulationEngine(scene_name=scene, headless=headless_ui)
     engine.start(with_viewer=not headless_ui)

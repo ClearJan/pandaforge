@@ -2,18 +2,19 @@
 
 Test suite: `pytest tests` on 2026-10-25, Windows 11, Python 3.11.9,
 pytest 9.1.1 + pytest-timeout. QT runs with the offscreen platform except
-the viewer tests, which open a REAL MuJoCo window (skipped on display-less CI). Result: **55 passed, 0 failed, 0 skipped** (incl. 4 real-viewer tests).
+the viewer tests, which open a REAL MuJoCo window (skipped on display-less CI). Result: **64 passed, 0 failed, 0 skipped** (incl. real-viewer and showcase runs).
 
 Legend: PASS / FAIL / SKIP / BLOCKED / NOT RUN — nothing below is
 pre-filled; every PASS row corresponds to a real executed test.
 
-## Unit tests (`tests/unit/`) — 37 tests, all PASS
+## Unit tests (`tests/unit/`) — 42 tests, all PASS
 
 | Test file | Covers | Result |
 |---|---|---|
 | test_kinematics.py (13) | quaternion/matrix round-trip; SO(3) error incl. near-pi branch; FK home sanity; **Jacobian frame convention via finite differences**; IK 100-pose acceptance (≥95% required, got 100%); out-of-reach rejection; joint-limit compliance; multi-start; tolerance fields | PASS |
 | test_collision.py (7) | home config collision-free; endpoint collision detection; **checker vs mj_forward parity** (30 random states); mid-segment penetration caught (both endpoints free); gripper-cube whitelist semantics in both modes; joint-limit reporting; path validation sampling | PASS |
 | test_planners.py (8) | RRT-Connect invariants on blocked task + independent re-validation; RRT on open task; RRT-Connect efficiency vs RRT; impossible goal fails cleanly (no fake path); linear baseline refuses blocked / accepts free; **seed determinism (identical path)**; shortcutting reduces length + stays valid | PASS |
+| test_rrt_star.py (5) | RRT\* solves and its RAW path cost never exceeds RRT's (same seed); cost history monotone; Informed solves; informed sampler produces points provably inside the admissible ellipsoid (exact inverse-transform check, 300 samples); determinism; k(n) bound sanity | PASS |
 | test_trajectory.py (9) | generated trajectories respect v/a limits; endpoints; time clamping; long-jump stretching; degenerate path rejection; tiny-limits feasibility; zero-rescale-budget raise; Panda limit spec; C1 velocity continuity at waypoints | PASS |
 
 ## Integration tests (`tests/integration/`) — 5 tests, all PASS
@@ -59,6 +60,19 @@ opened because `mujoco.viewer` was used without an explicit import; the
 graceful headless fallback masked it as a warning. Fixed in
 `simulation/viewer.py`, pinned by the tests above, verified end-to-end
 (engine + live viewer + joint command + clean shutdown).
+
+## Showcase tests (`tests/gui/test_showcase.py`) — 4 tests, all PASS
+
+| Test | What it proves | Result |
+|---|---|---|
+| test_showcase_completes_end_to_end | one-click demo: obstacle sweep + full pick & place, physical cube at target | PASS |
+| test_showcase_abort_on_estop | e-stop aborts the sequencer via callback (controllers detach on estop) | PASS |
+| test_path_visual_and_decorations | path decimation bounds; empty/short inputs | PASS |
+| test_decorations_drawn_in_real_viewer | user-scene geoms render in a REAL viewer window | PASS |
+
+Two engine protocol defects found by these tests and fixed: ApplySceneCmd
+and E-stop silently detached controllers (now: controllers may opt into
+surviving scene switches; e-stop notified via callback).
 
 ## Interactive verification (manual, NOT covered by offscreen tests)
 

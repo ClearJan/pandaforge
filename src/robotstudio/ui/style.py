@@ -9,13 +9,13 @@ QDockWidget::title {
     font-weight: 600;
 }
 QGroupBox {
-    border: 1px solid #333a42; border-radius: 4px; margin-top: 10px;
-    padding: 8px 6px 6px 6px; font-weight: 600;
+    border: 1px solid #333a42; border-radius: 5px; margin-top: 12px;
+    padding: 10px 8px 8px 8px; font-weight: 600;
 }
 QGroupBox::title { subcontrol-origin: margin; left: 8px; padding: 0 3px; color: #7fb4e6; }
 QPushButton {
-    background-color: #2d3540; border: 1px solid #3d4754; border-radius: 3px;
-    padding: 5px 12px; min-height: 18px;
+    background-color: #2d3540; border: 1px solid #3d4754; border-radius: 4px;
+    padding: 6px 14px; min-height: 20px; font-weight: 500;
 }
 QPushButton:hover { background-color: #39424f; }
 QPushButton:pressed { background-color: #262d37; }
@@ -40,6 +40,14 @@ QHeaderView::section {
 }
 QTextEdit, QPlainTextEdit { background-color: #14171b; border: 1px solid #3d4754; }
 QStatusBar { background: #262b31; }
+QToolBar { background: #22272d; border: none; border-bottom: 1px solid #333a42; padding: 3px 6px; spacing: 6px; }
+QToolBar::separator { background: #333a42; width: 1px; margin: 4px 6px; }
+QToolBar QToolButton {
+    background: transparent; border: 1px solid transparent; border-radius: 3px;
+    padding: 5px 12px; color: #d6dbe1; font-weight: 600;
+}
+QToolBar QToolButton:hover { background: #2d3540; border-color: #3d4754; }
+QToolBar QToolButton:pressed { background: #262d37; }
 QLabel[state="ok"] { color: #7ed491; }
 QLabel[state="err"] { color: #ef7b7b; }
 QLabel[state="warn"] { color: #e6c07b; }

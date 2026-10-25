@@ -138,6 +138,21 @@ class MainWindow(QMainWindow):
         self.grasp_panel = GraspPanel()
         self._add_dock("Automatic Pick && Place", self.grasp_panel, Qt.BottomDockWidgetArea)
 
+        # --- toolbar: showcase / e-stop / reset ---
+        from PySide6.QtWidgets import QToolBar
+
+
+        toolbar = QToolBar("Main")
+        toolbar.setMovable(False)
+        toolbar.addAction("▶  Run Showcase", self._on_showcase)
+        toolbar.addSeparator()
+        estop_action = toolbar.addAction("⏹  E-STOP")
+        estop_action.triggered.connect(lambda: self.engine.set_estop(True))
+        toolbar.addAction("⟲  Reset", self.engine.reset)
+        toolbar.addAction("⏵/⏸  Pause", lambda: self.engine.set_paused(not self.engine.snapshot().paused))
+        self.addToolBar(toolbar)
+        self._showcase = None
+
         # --- status bar ---
         self.status_label = QLabel("engine starting…")
         self.statusBar().addWidget(self.status_label, 1)
@@ -167,7 +182,7 @@ class MainWindow(QMainWindow):
         pp.plan_requested.connect(self._on_plan)
         pp.execute_requested.connect(self._on_execute)
         pp.cancel_requested.connect(self._on_cancel)
-        pp.clear_path_requested.connect(lambda: self.plan_panel.set_execution_state("no plan yet", "warn"))
+        pp.clear_path_requested.connect(self._on_clear_path)
 
         gp = self.grasp_panel
         gp.grasp_requested.connect(self._on_grasp)
@@ -258,11 +273,16 @@ class MainWindow(QMainWindow):
         self._plan_result = result
         self.plan_panel.execute_btn.setEnabled(result.success)
         if result.success:
+            self.engine.set_path_visual(result.path)  # show the path in 3D
             self.status_label.setText(
-                f"plan found ({result.algorithm}, {result.planning_time:.2f}s) - ready to execute"
+                f"plan found ({result.algorithm}, {result.planning_time:.2f}s) - path shown in 3D view - ready to execute"
             )
         else:
             self.status_label.setText(f"planning failed: {result.message}")
+
+    def _on_clear_path(self) -> None:
+        self.engine.set_path_visual(None)
+        self.plan_panel.set_execution_state("no plan yet", "warn")
 
     def _on_execute(self) -> None:
         if self._plan_result is None or not self._plan_result.success:
@@ -293,6 +313,19 @@ class MainWindow(QMainWindow):
         self.engine.set_joints(self.engine.snapshot().qpos[self.robot.arm_qposadr].copy())
         self.plan_panel.set_execution_state("cancelled", "warn")
         self.status_label.setText("motion cancelled")
+
+    def _on_showcase(self) -> None:
+        """One-click demo: obstacle sweep -> tabletop pick & place."""
+        from robotstudio.control.showcase import ShowcaseSequencer
+
+        if self._showcase is not None and self._showcase.stage.value != "done":
+            QMessageBox.information(self, "Showcase", "A showcase is already running.")
+            return
+        self.engine.set_estop(False)
+        seq = ShowcaseSequencer(self.engine)
+        self._showcase = seq
+        self.engine.set_controller(seq)
+        self.status_label.setText("showcase running - watch the 3D view")
 
     def _on_grasp(self, obj_xyz: tuple, place_xyz: tuple) -> None:
         if self._fsm is not None and not self._fsm.is_terminal:
@@ -394,6 +427,8 @@ class MainWindow(QMainWindow):
             + ("  [E-STOP]" if snap.estop else "")
             + ("  [paused]" if snap.paused else "")
         )
+        if getattr(self, "_showcase", None) is not None and self._showcase.stage.value != "done":
+            self.status_label.setText(self._showcase.status_text)
         if self._fsm is not None:
             self.grasp_panel.update_fsm()
             if self._fsm.is_terminal:

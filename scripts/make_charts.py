@@ -141,11 +141,83 @@ def chart_grasp_summary() -> None:
     plt.close(fig)
 
 
+def chart_rrt_star_convergence() -> None:
+    path = BENCH_ROOT / "rrt_star_convergence.csv"
+    if not path.exists():
+        return
+    import csv as _csv
+
+    series: dict[str, list[tuple[float, float]]] = {}
+    with open(path, encoding="utf-8") as f:
+        for r in _csv.DictReader(f):
+            if r["best_cost"] == "":
+                continue
+            series.setdefault(r["planner"], []).append((int(r["iteration"]), float(r["best_cost"])))
+    fig, ax = plt.subplots(figsize=(7.5, 4.2), dpi=150)
+    style = {"rrt_star": ("#7fb4e6", "RRT*"), "informed_rrt_star": ("#7ed491", "Informed RRT*")}
+    for name, pts in series.items():
+        pts.sort()
+        xs = [p[0] for p in pts]
+        ys = [p[1] for p in pts]
+        color, label = style.get(name, ("#e6c07b", name))
+        ax.plot(xs, ys, color=color, label=label, linewidth=1.6)
+    ax.set_xlabel("iteration")
+    ax.set_ylabel("best solution cost [rad]")
+    ax.set_title("Cost convergence on the tabletop task (seed 101, 15 s budget)")
+    ax.legend()
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(CHART_DIR / "rrt_star_convergence.png")
+    plt.close(fig)
+
+
+def chart_rrt_star_quality() -> None:
+    path = BENCH_ROOT / "rrt_star_quality.csv"
+    if not path.exists():
+        return
+    import csv as _csv
+
+    rows = list(_csv.DictReader(open(path, encoding="utf-8")))
+    data, positions, labels, colors = [], [], [], []
+    pos = 1.0
+    palette = {"rrt": "#8a9bab", "rrt_star": "#7fb4e6", "informed_rrt_star": "#7ed491"}
+    names = {"rrt": "RRT", "rrt_star": "RRT*", "informed_rrt_star": "Informed RRT*"}
+    for scenario in ("empty", "tabletop", "single_obs"):
+        for p in ("rrt", "rrt_star", "informed_rrt_star"):
+            costs = [
+                float(r["raw_path_length"])
+                for r in rows
+                if r["scenario"] == scenario and r["planner"] == p and r["success"] == "True" and r["raw_path_length"] != ""
+            ]
+            if costs:
+                data.append(costs)
+                positions.append(pos)
+                labels.append(names[p])
+                colors.append(palette[p])
+            pos += 1.0
+        pos += 0.8
+    fig, ax = plt.subplots(figsize=(9, 4.2), dpi=150)
+    bp = ax.boxplot(data, positions=positions, widths=0.7, patch_artist=True, medianprops=dict(color="#1e2227"))
+    for patch, c in zip(bp["boxes"], colors):
+        patch.set_facecolor(c)
+        patch.set_alpha(0.85)
+    ax.set_ylabel("raw path cost [rad] (no shortcutting)")
+    ax.set_title("Path quality: raw cost distribution (15 s budget, 10 seeds)")
+    handles = [plt.Rectangle((0, 0), 1, 1, color=palette[k]) for k in ("rrt", "rrt_star", "informed_rrt_star")]
+    ax.legend(handles, [names[k] for k in ("rrt", "rrt_star", "informed_rrt_star")])
+    ax.spines[["top", "right"]].set_visible(False)
+    fig.tight_layout()
+    fig.savefig(CHART_DIR / "rrt_star_quality.png")
+    plt.close(fig)
+
+
 def main() -> None:
     chart_success_rates()
     chart_planning_times()
     chart_ik_times()
     chart_grasp_summary()
+    chart_rrt_star_convergence()
+    chart_rrt_star_quality()
     print(f"charts written to {CHART_DIR}")
 
 

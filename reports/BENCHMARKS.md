@@ -106,14 +106,52 @@ Failure analysis history (all fixed, kept for the record):
    settle-based completion + static hold targets (D5) and a 10 mm release
    clearance.
 
-## 4. Collision checker performance
+## 4. Optimal planning: RRT* / Informed RRT* (path quality)
+
+Protocol (`rrt_star_bench.py`): 3 scenes x 10 fixed seeds (101-110; the
+blocked scene yields 5 feasible per-seed goals, others not silently
+counted), **15 s budget, shortcutting DISABLED** so raw planner quality is
+compared. `single_obs` uses the proven far-side goal; `tabletop` a fixed
+near goal; `empty` random far configurations (> 1 rad from home).
+
+| scene | planner | n | success | median raw cost [rad] | median time |
+|---|---|---|---|---|---|
+| empty | rrt | 10 | 100% | 5.346 | 0.02 s |
+| empty | rrt_star | 10 | 100% | **3.947 (-26%)** | 15 s (full budget) |
+| empty | informed_rrt_star | 10 | 100% | 3.947 | 15 s |
+| tabletop | rrt | 10 | 100% | 0.4666 | 0.01 s |
+| tabletop | rrt_star | 10 | 100% | 0.4666 | 15 s |
+| tabletop | informed_rrt_star | 10 | 100% | 0.4666 | 15 s |
+| single_obs | rrt | 5 | 60% | 4.542 | 0.15 s |
+| single_obs | rrt_star | 5 | 60% | **3.589 (-21%)** | 15 s |
+| single_obs | informed_rrt_star | 5 | 60% | 3.589 | 15 s |
+
+Reading (honest):
+
+- Where a first solution is found, RRT\* reliably improves raw path cost by
+  ~20-26% over RRT and runs the full budget refining it; the tabletop task
+  is short enough that all three converge to the same (near-optimal) path -
+  RRT\* CONFIRMS optimality there rather than beating RRT.
+- On the blocked 7-D scene, single-tree optimal search fails to find a first
+  solution on 2/5 feasible goals within 15 s (rewiring overhead per
+  iteration) - the classic feasibility/optimality trade-off vs RRT-Connect
+  (which solves 100% of these in ~0.2 s, then shortcutting closes most of
+  the gap). Reported as measured; nothing tuned away.
+- Informed sampling's benefit shows in the convergence traces rather than
+  the final medians here (open scenes, moderate dimensionality): see the
+  convergence chart.
+
+![RRT* cost convergence](charts/rrt_star_convergence.png)
+![RRT* path quality](charts/rrt_star_quality.png)
+
+## 5. Collision checker performance
 
 | operation | measured |
 |---|---|
 | single state check (kinematics + collision + whitelist) | 0.052 ms |
 | 200-state batch | 10.4 ms |
 
-## 5. Optimization record (evidence-based)
+## 6. Optimization record (evidence-based)
 
 | change | evidence | effect |
 |---|---|---|

@@ -26,6 +26,7 @@ from __future__ import annotations
 import queue
 import threading
 import time
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Protocol
@@ -47,6 +48,17 @@ log = get_logger("engine")
 
 # z position used to park disabled scene bodies far below the floor
 _HIDDEN_Z = -5.0
+
+
+def _path_capsules(path: list[np.ndarray] | None) -> list[tuple[np.ndarray, np.ndarray]]:
+    """Decimate an EE waypoint list into <=120 (p1, p2) capsule segments."""
+    if not path:
+        return []
+    pts = np.asarray(path)
+    if len(pts) > 121:
+        idx = np.linspace(0, len(pts) - 1, 121).astype(int)
+        pts = pts[idx]
+    return [(pts[i], pts[i + 1]) for i in range(len(pts) - 1)]
 
 
 # --------------------------------------------------------------------------- #
@@ -219,6 +231,10 @@ class SimulationEngine:
         self._last_error: str | None = None
         self._last_wall = time.perf_counter()
         self._fps_ema = 0.0
+        # 3D decorations (drawn via the viewer's user scene each frame)
+        self._viz_path: list[np.ndarray] | None = None  # EE waypoints, world m
+        self._ee_trace: deque[np.ndarray] = deque(maxlen=260)
+        self._contact_points: list[np.ndarray] = []
 
     # ------------------------------------------------------------------ #
     # model / scene management
@@ -358,6 +374,7 @@ class SimulationEngine:
                     self._step_frame()
                 elif self.estop:
                     self._estop_hold()
+                self._update_decorations(viewer)
                 viewer.sync()
             except Exception as exc:  # keep the loop alive, but surface the error
                 log.exception("engine loop error")
@@ -399,6 +416,8 @@ class SimulationEngine:
     def _record_history(self, steps: int) -> None:
         h = self._history
         h["t"].append(float(self.data.time))
+        self._ee_trace.append(self.data.body(self.robot.ee_body_id).xpos.copy())
+        self._refresh_contact_points()
         h["arm_q"].append(self.robot.arm_q_from_qpos(self.data.qpos).copy())
         h["jtrack"].append(np.abs(self.data.ctrl[:7] - self.data.qpos[self.robot.arm_qposadr]))
         ee_pos = self.data.body(self.robot.ee_body_id).xpos.copy()
@@ -475,12 +494,21 @@ class SimulationEngine:
         elif isinstance(cmd, ResetCmd):
             self._reset_to_home()
         elif isinstance(cmd, ApplySceneCmd):
+            # Controllers may opt into surviving a scene switch (e.g. the
+            # showcase sequencer drives the switch itself); plain controllers
+            # (trajectory executors, manual joint mode) are detached.
+            kept_controller = (
+                self._controller if getattr(self._controller, "keep_across_scene_switch", False) else None
+            )
             self._controller = None
             self._controller_status = "idle"
             self._scene_spec = cmd.spec
             self.scene_name = cmd.spec.name
             self._apply_scene_to_model(cmd.spec)
             self._reset_to_home()
+            if kept_controller is not None:
+                self._controller = kept_controller
+                self._controller_status = "controller active"
             if getattr(self, "_viewer_ref", None) is not None:
                 self._viewer_ref.sync()
         elif isinstance(cmd, SetSpeedCmd):
@@ -531,6 +559,72 @@ class SimulationEngine:
 
     def on_estop(self, callback: Callable[[], None]) -> None:
         self._on_estop.append(callback)
+
+    def set_path_visual(self, joint_path) -> None:
+        """Show a planned path in the 3D viewer (EE waypoints, None clears)."""
+        if joint_path is None:
+            self._viz_path = None
+            return
+        pts: list[np.ndarray] = []
+        fk = self._fk_data
+        with self._lock:
+            for q in joint_path:
+                fk.qpos[self.robot.arm_qposadr] = q
+                fk.qpos[self.robot.finger_qposadr] = 0.04
+                mujoco.mj_kinematics(self.model, fk)
+                pts.append(fk.body(self.robot.ee_body_id).xpos.copy())
+        self._viz_path = pts
+
+    @staticmethod
+    def _z_align_rotation(direction: np.ndarray) -> np.ndarray:
+        """Rotation matrix mapping +z onto ``direction`` (unit)."""
+        z = np.array([0.0, 0.0, 1.0])
+        v = np.cross(z, direction)
+        c = float(np.dot(z, direction))
+        if np.linalg.norm(v) < 1e-9:
+            return np.eye(3) if c > 0 else np.diag([1.0, -1.0, -1.0])
+        s = np.linalg.norm(v)
+        K = np.array([[0, -v[2], v[1]], [v[2], 0, -v[0]], [-v[1], v[0], 0]])
+        return np.eye(3) + K + K @ K * ((1 - c) / (s * s))
+
+    def _update_decorations(self, viewer: ViewerHandle) -> None:
+        """Draw path / EE trace / grasp contacts into the viewer user scene."""
+        if viewer._viewer is None:
+            return
+        scn = viewer._viewer.user_scn
+        scn.ngeom = 0
+        mat = np.eye(3).flatten()
+        cap = scn.geoms.shape[0] - 1
+        for p1, p2 in _path_capsules(self._viz_path):
+            if scn.ngeom >= cap:
+                break
+            mid = (p1 + p2) / 2.0
+            d = p2 - p1
+            half = float(np.linalg.norm(d)) / 2.0
+            if half < 1e-6:
+                continue
+            R = self._z_align_rotation(d / (2 * half))
+            mujoco.mjv_initGeom(
+                scn.geoms[scn.ngeom], mujoco.mjtGeom.mjGEOM_CAPSULE,
+                (0.004, half, 0.0), mid, R.flatten(), (0.25, 0.9, 0.45, 0.6),
+            )
+            scn.ngeom += 1
+        for pos in self._ee_trace:
+            if scn.ngeom >= cap:
+                break
+            mujoco.mjv_initGeom(
+                scn.geoms[scn.ngeom], mujoco.mjtGeom.mjGEOM_SPHERE,
+                (0.0035, 0.0, 0.0), pos, mat, (0.35, 0.65, 1.0, 0.45),
+            )
+            scn.ngeom += 1
+        for pos in self._contact_points:
+            if scn.ngeom >= cap:
+                break
+            mujoco.mjv_initGeom(
+                scn.geoms[scn.ngeom], mujoco.mjtGeom.mjGEOM_SPHERE,
+                (0.007, 0.0, 0.0), pos, mat, (1.0, 0.35, 0.25, 0.8),
+            )
+            scn.ngeom += 1
 
     def on_error(self, callback: Callable[[str], None]) -> None:
         """Register a callback invoked (from the engine thread) on runtime errors."""
@@ -595,6 +689,28 @@ class SimulationEngine:
                 grasp_contacts=grasp_contacts,
                 history=hist,
             )
+
+    def _refresh_contact_points(self) -> None:
+        """Positions of fingertip-vs-cube contacts (for 3D visualization)."""
+        m, d = self.model, self.data
+        pts: list[np.ndarray] = []
+        try:
+            cube_gid = int(m.geom("cube_geom").id)
+        except (KeyError, ValueError):
+            self._contact_points = pts
+            return
+        finger_gids: set[int] = set()
+        for bid in self.robot.finger_body_ids:
+            start = int(m.body_geomadr[bid])
+            finger_gids.update(range(start, start + int(m.body_geomnum[bid])))
+        for i in range(d.ncon):
+            c = d.contact[i]
+            g1, g2 = int(c.geom1), int(c.geom2)
+            if (g1 == cube_gid and g2 in finger_gids) or (g2 == cube_gid and g1 in finger_gids):
+                pts.append(np.asarray(c.pos).copy())
+                if len(pts) >= 16:
+                    break
+        self._contact_points = pts
 
     def _count_grasp_contacts(self) -> int:
         """Contacts between finger geoms and the cube (grasp evidence)."""

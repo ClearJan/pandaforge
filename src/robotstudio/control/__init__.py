@@ -4,4 +4,4 @@ from robotstudio.control.executor import (
     TrajectoryExecutor,
 )
 
-__all__ = ["TrajectoryExecutor", "ExecutionStats", "InfeasibleTrajectoryError"]
+__all__ = ["TrajectoryExecutor", "ExecutionStats", "InfeasibleTrajectoryError", "ShowcaseSequencer"]

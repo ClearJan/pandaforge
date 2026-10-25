@@ -1,0 +1,56 @@
+{
+  "empty/rrt": {
+    "n": 10,
+    "success_rate": 1.0,
+    "median_raw_cost": 5.346471701644431,
+    "median_time_s": 0.02247160000842996
+  },
+  "empty/rrt_star": {
+    "n": 10,
+    "success_rate": 1.0,
+    "median_raw_cost": 3.947053504247518,
+    "median_time_s": 15.001648749981541
+  },
+  "empty/informed_rrt_star": {
+    "n": 10,
+    "success_rate": 1.0,
+    "median_raw_cost": 3.947338262318046,
+    "median_time_s": 15.000614099990344
+  },
+  "tabletop/rrt": {
+    "n": 10,
+    "success_rate": 1.0,
+    "median_raw_cost": 0.4665833258915281,
+    "median_time_s": 0.010397700010798872
+  },
+  "tabletop/rrt_star": {
+    "n": 10,
+    "success_rate": 1.0,
+    "median_raw_cost": 0.4665833258915281,
+    "median_time_s": 15.001419799984433
+  },
+  "tabletop/informed_rrt_star": {
+    "n": 10,
+    "success_rate": 1.0,
+    "median_raw_cost": 0.4665833258915281,
+    "median_time_s": 15.000838100007968
+  },
+  "single_obs/rrt": {
+    "n": 5,
+    "success_rate": 0.6,
+    "median_raw_cost": 4.5423263280274115,
+    "median_time_s": 0.14741049997974187
+  },
+  "single_obs/rrt_star": {
+    "n": 5,
+    "success_rate": 0.6,
+    "median_raw_cost": 3.5890449662306643,
+    "median_time_s": 15.001020800031256
+  },
+  "single_obs/informed_rrt_star": {
+    "n": 5,
+    "success_rate": 0.6,
+    "median_raw_cost": 3.5890449662306643,
+    "median_time_s": 15.00108400004683
+  }
+}
