@@ -130,8 +130,25 @@ def _fmt(values) -> str:
     return " ".join(f"{v:.6g}" for v in values)
 
 
+def all_obstacles() -> dict[str, BoxObstacle | SphereObstacle | CylinderObstacle]:
+    """Union of every preset obstacle, keyed by body name (union layout)."""
+    out: dict[str, BoxObstacle | SphereObstacle | CylinderObstacle] = {}
+    for scene in preset_scenes().values():
+        for o in scene.obstacles:
+            out.setdefault(o.name, o)
+    return out
+
+
 def build_scene_xml(spec: SceneSpec) -> str:
-    """Render a SceneSpec as a complete MJCF string (sibling-of-panda layout)."""
+    """Render a SceneSpec as a complete MJCF string (sibling-of-panda layout).
+
+    UNION LAYOUT: every scene file contains every body (table, all preset
+    obstacles, cube, place marker), ALL with collision enabled. Disabled
+    bodies are parked far below the floor (pure position hiding): MuJoCo
+    bakes contype=0 geoms out of the collision pipeline at compile time, so
+    runtime flag flips cannot re-enable them - position hiding is the only
+    switch that supports true in-place preset changes.
+    """
     parts: list[str] = []
     parts.append(
         '<mujoco model="robotstudio scene">\n'
@@ -162,63 +179,68 @@ def build_scene_xml(spec: SceneSpec) -> str:
         '    <geom name="floor" size="0 0 0.05" type="plane" material="groundplane"/>\n',
     ]
 
-    if spec.table.enabled:
-        t = spec.table
-        top_z = t.top_height
-        plate_z = top_z - t.thickness / 2.0
-        wb.append(
-            f'    <body name="table" pos="{_fmt([t.center[0], t.center[1], plate_z])}">\n'
-            f'      <geom name="table_top" type="box" size="{_fmt([t.half_extents[0], t.half_extents[1], t.thickness / 2.0])}" rgba="{_fmt(t.rgba)}" friction="0.8 0.02 0.001"/>\n'
-            "    </body>\n"
-            # legs for realism (visual + collision)
-            f'    <body name="table_legs" pos="{_fmt([t.center[0], t.center[1], (top_z - t.thickness) / 2.0])}">\n'
-        )
-        lx, ly = t.half_extents
-        for sx in (-1, 1):
-            for sy in (-1, 1):
-                wb.append(
-                    f'      <geom name="table_leg_{sx}_{sy}" type="box" size="0.02 0.02 {(top_z - t.thickness) / 2.0}" pos="{_fmt([sx * lx * 0.85, sy * ly * 0.85, 0])}" rgba="0.3 0.3 0.3 1"/>\n'
-                )
-        wb.append("    </body>\n")
-
-    for obs in spec.obstacles:
-        if not obs.enabled:
-            continue
-        if obs.kind == "box":
+    # --- table (always present; hidden when disabled) ---
+    t = spec.table
+    top_z = t.top_height
+    plate_pos = [t.center[0], t.center[1], top_z - t.thickness / 2.0] if spec.table.enabled else [0, 0, -5.0]
+    legs_pos = [t.center[0], t.center[1], (top_z - t.thickness) / 2.0] if spec.table.enabled else [0, 0, -5.0]
+    wb.append(
+        f'    <body name="table" pos="{_fmt(plate_pos)}">\n'
+        f'      <geom name="table_top" type="box" size="{_fmt([t.half_extents[0], t.half_extents[1], t.thickness / 2.0])}" rgba="{_fmt(t.rgba)}" friction="0.8 0.02 0.001"/>\n'
+        "    </body>\n"
+        f'    <body name="table_legs" pos="{_fmt(legs_pos)}">\n'
+    )
+    lx, ly = t.half_extents
+    for sx in (-1, 1):
+        for sy in (-1, 1):
             wb.append(
-                f'    <body name="{obs.name}" pos="{_fmt(obs.pos)}" quat="{_fmt(obs.quat)}">\n'
-                f'      <geom name="{obs.name}_geom" type="box" size="{_fmt(obs.size)}" rgba="{_fmt(obs.rgba)}" friction="0.8 0.02 0.001"/>\n'
+                f'      <geom name="table_leg_{sx}_{sy}" type="box" size="0.02 0.02 {(top_z - t.thickness) / 2.0}" pos="{_fmt([sx * lx * 0.85, sy * ly * 0.85, 0])}" rgba="0.3 0.3 0.3 1"/>\n'
+            )
+    wb.append("    </body>\n")
+
+    # --- obstacles: union of ALL presets; disabled ones parked + collision-off ---
+    spec_obs = {o.name: o for o in spec.obstacles if o.enabled}
+    for obs in all_obstacles().values():
+        enabled = obs.name in spec_obs
+        o = spec_obs.get(obs.name, obs)
+        pos = o.pos if enabled else (0.0, 0.0, -5.0)
+        if o.kind == "box":
+            wb.append(
+                f'    <body name="{o.name}" pos="{_fmt(pos)}" quat="{_fmt(o.quat)}">\n'
+                f'      <geom name="{o.name}_geom" type="box" size="{_fmt(o.size)}" rgba="{_fmt(o.rgba)}" friction="0.8 0.02 0.001"/>\n'
                 "    </body>\n"
             )
-        elif obs.kind == "sphere":
+        elif o.kind == "sphere":
             wb.append(
-                f'    <body name="{obs.name}" pos="{_fmt(obs.pos)}">\n'
-                f'      <geom name="{obs.name}_geom" type="sphere" size="{_fmt(obs.radius)}" rgba="{_fmt(obs.rgba)}"/>\n'
+                f'    <body name="{o.name}" pos="{_fmt(pos)}">\n'
+                f'      <geom name="{o.name}_geom" type="sphere" size="{_fmt(o.radius)}" rgba="{_fmt(o.rgba)}"/>\n'
                 "    </body>\n"
             )
-        elif obs.kind == "cylinder":
+        elif o.kind == "cylinder":
             wb.append(
-                f'    <body name="{obs.name}" pos="{_fmt(obs.pos)}" quat="{_fmt(obs.quat)}">\n'
-                f'      <geom name="{obs.name}_geom" type="cylinder" size="{_fmt([obs.radius, obs.half_length])}" rgba="{_fmt(obs.rgba)}"/>\n'
+                f'    <body name="{o.name}" pos="{_fmt(pos)}" quat="{_fmt(o.quat)}">\n'
+                f'      <geom name="{o.name}_geom" type="cylinder" size="{_fmt([o.radius, o.half_length])}" rgba="{_fmt(o.rgba)}"/>\n'
                 "    </body>\n"
             )
 
-    if spec.cube_enabled:
-        wb.append(
-            f'    <body name="cube" pos="{_fmt(spec.cube_pos)}">\n'
-            "      <freejoint name=\"cube_joint\"/>\n"
-            f'      <geom name="cube_geom" type="box" size="{_fmt([spec.cube_size] * 3)}" rgba="{_fmt(spec.cube_rgba)}" mass="0.1" friction="0.9 0.02 0.002" condim="4"/>\n'
-            f'      <site name="cube_site" size="0.001"/>\n'
-            "    </body>\n"
-        )
+    # --- grasp cube (always present) ---
+    cube_pos = spec.cube_pos if spec.cube_enabled else (0.0, 0.0, -5.0)
+    wb.append(
+        f'    <body name="cube" pos="{_fmt(cube_pos)}">\n'
+        "      <freejoint name=\"cube_joint\"/>\n"
+        f'      <geom name="cube_geom" type="box" size="{_fmt([spec.cube_size] * 3)}" rgba="{_fmt(spec.cube_rgba)}" mass="0.1" friction="0.9 0.02 0.002" condim="4"/>\n'
+        f'      <site name="cube_site" size="0.001"/>\n'
+        "    </body>\n"
+    )
 
-    if spec.place_enabled:
-        wb.append(
-            f'    <body name="place_target" mocap="true" pos="{_fmt(spec.place_pos)}">\n'
-            f'      <geom name="place_marker" type="cylinder" size="{_fmt([spec.cube_size * 1.35, 0.001])}" rgba="0.2 0.9 0.3 0.4" contype="0" conaffinity="0"/>\n'
-            f'      <site name="place_site" size="0.002"/>\n'
-            "    </body>\n"
-        )
+    # --- place marker (always present) ---
+    place_pos = spec.place_pos if spec.place_enabled else (0.0, 0.0, -5.0)
+    wb.append(
+        f'    <body name="place_target" mocap="true" pos="{_fmt(place_pos)}">\n'
+        f'      <geom name="place_marker" type="cylinder" size="{_fmt([spec.cube_size * 1.35, 0.001])}" rgba="0.2 0.9 0.3 0.4" contype="0" conaffinity="0"/>\n'
+        f'      <site name="place_site" size="0.002"/>\n'
+        "    </body>\n"
+    )
 
     parts.append("  <worldbody>\n" + "".join(wb) + "  </worldbody>\n")
     # NOTE: no extra keyframe here - panda.xml's "home" keyframe (index 0)

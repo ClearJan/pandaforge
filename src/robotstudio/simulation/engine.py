@@ -38,6 +38,7 @@ from robotstudio.config import PandaSpec, SimDefaults
 from robotstudio.robots.panda import PandaRobot
 from robotstudio.simulation.scenes import (
     SceneSpec,
+    all_obstacles,
     preset_scenes,
     write_scene_file,
 )
@@ -245,7 +246,6 @@ class SimulationEngine:
         self.data = mujoco.MjData(self.model)
         self._fk_data = mujoco.MjData(self.model)
         self.robot = PandaRobot(self.model)
-        self._stash_original_collision_flags()
         self._cube_body_name_map = {"cube": self.model.body("cube").id}
         self._apply_scene_to_model(spec)
         mujoco.mj_resetDataKeyframe(self.model, self.data, 0)  # home keyframe
@@ -263,34 +263,28 @@ class SimulationEngine:
             top_z = spec.table.top_height
             plate_z = top_z - spec.table.thickness / 2.0
             table_body.pos[:] = [spec.table.center[0], spec.table.center[1], plate_z]
-            self._set_geom_enabled_by_body(table_body.id, True)
             legs = m.body("table_legs")
             legs.pos[:] = [spec.table.center[0], spec.table.center[1], (top_z - spec.table.thickness) / 2.0]
-            self._set_geom_enabled_by_body(legs.id, True)
         else:
             table_body.pos[:] = [0, 0, _HIDDEN_Z]
-            self._set_geom_enabled_by_body(table_body.id, False)
             legs = m.body("table_legs")
             legs.pos[:] = [0, 0, _HIDDEN_Z]
-            self._set_geom_enabled_by_body(legs.id, False)
 
-        # --- obstacles: names present in the model but missing from spec are hidden ---
+        # --- obstacles (union bodies; disabled ones parked + collision-off) ---
         spec_obs = {o.name: o for o in spec.obstacles if o.enabled}
-        for body_id in range(m.nbody):
-            name = mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, body_id)
-            if name is None or not name.startswith(("wall_", "shelf_", "post_", "obs_")):
-                continue
+        for name in all_obstacles():
+            try:
+                body = m.body(name)
+            except KeyError:
+                continue  # model predates the union layout for this obstacle
             if name in spec_obs:
                 o = spec_obs[name]
-                m.body(name).pos[:] = o.pos
-                m.body(name).quat[:] = o.quat
-                self._set_geom_enabled_by_body(body_id, True)
+                body.pos[:] = o.pos
+                body.quat[:] = o.quat
             else:
-                m.body(name).pos[:] = [0, 0, _HIDDEN_Z]
-                self._set_geom_enabled_by_body(body_id, False)
+                body.pos[:] = [0, 0, _HIDDEN_Z]
 
-        # --- cube ---
-        cube_bid = m.body("cube").id
+        # --- cube (hidden by position; collisions stay enabled) ---
         cube_jadr = m.jnt_qposadr[m.joint("cube_joint").id]
         cube_vadr = m.jnt_dofadr[m.joint("cube_joint").id]
         if spec.cube_enabled:
@@ -300,10 +294,8 @@ class SimulationEngine:
             d.qpos[cube_jadr : cube_jadr + 3] = [x, y, z]
             d.qpos[cube_jadr + 3 : cube_jadr + 7] = [1, 0, 0, 0]
             d.qvel[cube_vadr : cube_vadr + 6] = 0
-            self._set_geom_enabled_by_body(cube_bid, True)
         else:
             d.qpos[cube_jadr : cube_jadr + 3] = [0, 0, _HIDDEN_Z]
-            self._set_geom_enabled_by_body(cube_bid, False)
 
         # --- place target (mocap) ---
         try:
@@ -318,25 +310,6 @@ class SimulationEngine:
             pass
 
         mujoco.mj_forward(m, d)
-
-    def _set_geom_enabled_by_body(self, body_id: int, enabled: bool) -> None:
-        m = self.model
-        start = int(m.body_geomadr[body_id])
-        count = int(m.body_geomnum[body_id])
-        for gid in range(start, start + count):
-            if gid < 0:
-                continue
-            if enabled:
-                m.geom_contype[gid] = self._original_contype[gid]
-                m.geom_conaffinity[gid] = self._original_conaffinity[gid]
-            else:
-                m.geom_contype[gid] = 0
-                m.geom_conaffinity[gid] = 0
-
-    def _stash_original_collision_flags(self) -> None:
-        m = self.model
-        self._original_contype = m.geom_contype.copy()
-        self._original_conaffinity = m.geom_conaffinity.copy()
 
     def apply_scene_spec(self, spec: SceneSpec) -> None:
         """Submit a scene change; the viewer window stays open."""
@@ -504,8 +477,11 @@ class SimulationEngine:
             self._controller_status = "idle"
             self._scene_spec = cmd.spec
             self.scene_name = cmd.spec.name
-            self._apply_scene_to_model(cmd.spec)
+            # reset FIRST (keyframe restores the XML initial state), then
+            # apply the spec on top - otherwise the reset would drag the cube
+            # back to the XML's parked position instead of the spec's spawn.
             self._reset_to_home()
+            self._apply_scene_to_model(cmd.spec)
             if kept_controller is not None:
                 self._controller = kept_controller
                 self._controller_status = "controller active"
