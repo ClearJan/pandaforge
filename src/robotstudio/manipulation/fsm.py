@@ -42,11 +42,10 @@ from robotstudio.kinematics.ik import IKSolver
 from robotstudio.kinematics.pose import Pose, quat_to_mat
 from robotstudio.manipulation.grasp import (
     GRASP_QUAT_WXYZ,
-    grasp_pose,
+    grasp_candidates,
     gripper_opening_for,
-    place_pose,
-    place_pregrasp_pose,
-    pregrasp_pose,
+    place_pose_for,
+    place_pregrasp_for,
 )
 from robotstudio.planning.base import PlannerConfig
 from robotstudio.planning.rrt import RRTConnectPlanner
@@ -143,6 +142,8 @@ class GraspFSM:
         self._cube_z_at_grasp = float("nan")
         self._grasp_verified = False
         self._retrying = False
+        # selected antipodal candidate (top preferred, side fallback)
+        self.candidate = None
         self._hold_target: np.ndarray | None = None
         self._planning_note = ""
         engine.on_estop(self.abort)
@@ -189,6 +190,14 @@ class GraspFSM:
     def update(self, ctx, dt: float) -> np.ndarray | None:
         if self.is_terminal or self.state == GraspState.IDLE:
             return None
+        # keep the shadow checker's cube at the LIVE position: the shadow
+        # data otherwise holds the XML spawn pose, so grasp-phase collision
+        # checks would judge contacts against a cube that is not where the
+        # physical one is (exposed by position-jittered trials).
+        cube = ctx.cube_pos
+        cube_q = ctx.cube_quat
+        if cube is not None and cube_q is not None and self._carry_offset is None:
+            self.checker.set_shadow_cube_pose(np.asarray(cube).copy(), np.asarray(cube_q).copy())
         now = ctx.time
         if self._check_timeout(now):
             return None
@@ -306,6 +315,31 @@ class GraspFSM:
                 self._fail(f"{self.state.value}: execution failed")
         return targets
 
+    def _engine_breakaway_pairs(self) -> set[frozenset[str]]:
+        """Support pairs to tolerate during lift-off, from the LIVE physics.
+
+        The shadow checker's contact list is unreliable exactly at the
+        contact boundary (dist ~ 0 contacts appear/disappear), so the pairs
+        are discovered from the engine's own contact list at this instant:
+        the cube's support contacts plus gripper grazing on those support
+        bodies. Runs in the engine thread (Controller context).
+        """
+        m, d = self.engine.model, self.engine.data
+        gripper = {"left_finger", "right_finger", "hand"}
+
+        def body_of(gid: int) -> str:
+            return str(mujoco.mj_id2name(m, mujoco.mjtObj.mjOBJ_BODY, int(m.geom_bodyid[gid])))
+
+        contacts = [(body_of(int(c.geom1)), body_of(int(c.geom2))) for c in d.contact[: d.ncon]]
+        support = {b for pair in contacts for b in pair if "cube" in pair and b != "cube" and b not in gripper}
+        pairs: set[frozenset[str]] = set()
+        for b1, b2 in contacts:
+            if (b1 == "cube" and b2 not in gripper) or (b2 == "cube" and b1 not in gripper):
+                pairs.add(frozenset((b1, b2)))
+            elif (b1 in gripper and b2 in support) or (b2 in gripper and b1 in support):
+                pairs.add(frozenset((b1, b2)))
+        return pairs
+
     def _cube_pos(self, ctx) -> np.ndarray:
         p = ctx.cube_pos
         if p is None:
@@ -317,34 +351,52 @@ class GraspFSM:
     # state handlers
     # ------------------------------------------------------------------ #
     def _tick_pregrasp(self, ctx, now):
-        """Plan+execute a collision-free move to the pregrasp hover."""
+        """Choose a grasp candidate and move to its pregrasp hover.
+
+        Antipodal candidates are tried in preference order (top-down first,
+        then horizontal side grasps): the first candidate whose pregrasp IK
+        is collision-free AND reachable by a collision-free plan wins. A
+        blocked top face (e.g. a roof obstacle) therefore falls back to a
+        side grasp automatically.
+        """
         cube = self._cube_pos(ctx)
         if self._pending_plan is None:
             self._pending_plan = "planning"
-            self._planning_note = "planning"
-            pose = pregrasp_pose(cube, self.spec.cube_half)
-            res = self.ik.solve(
-                pose,
-                q_init=ctx.arm_q,
-                n_restarts=8,
-                validate=lambda q: self.checker.check_state(q, 0.04, holding_cube=False).valid,
-            )
-            if not res.success:
-                self._fail(f"PREGRASP: no collision-free IK for pregrasp pose (pos_err={res.pos_err:.3f} m)")
-                return None
-            if not self._plan_and_execute(ctx, res.arm_q, holding=False):
+            chosen = None
+            for cand in grasp_candidates(cube, self.spec.cube_half):
+                self._planning_note = f"candidate {'top' if cand.is_top else 'side'}"
+                res = self.ik.solve(
+                    cand.pregrasp,
+                    q_init=ctx.arm_q,
+                    n_restarts=8,
+                    validate=lambda q: self.checker.check_state(q, 0.04, holding_cube=False).valid,
+                )
+                if not res.success:
+                    continue
+                self.candidate = cand
+                if not self._plan_and_execute(ctx, res.arm_q, holding=False):
+                    if self.state != GraspState.PREGRASP:  # hard failure inside planning
+                        return None
+                    self.candidate = None
+                    continue
+                chosen = cand
+                break
+            if chosen is None:
+                self._fail("PREGRASP: no collision-free grasp candidate (top or side)")
                 return None
             self._planning_note = ""
         return self._run_executor(ctx, GraspState.APPROACH, holding=False)
 
     def _tick_approach(self, ctx, now):
-        """Vertical descent to the grasp pose (open fingers)."""
-        cube = self._cube_pos(ctx)
+        """Straight descent along the chosen candidate's approach axis."""
         if self._pending_plan is None:
+            if self.candidate is None:
+                self._fail("APPROACH: no grasp candidate selected")
+                return None
             self._pending_plan = "planning"
             self._planning_note = "IK descent"
             self.engine.set_gripper(PandaSpec.FINGER_OPEN)
-            if not self._ik_move(ctx, grasp_pose(cube, self.spec.cube_half), holding=False, finger_opening=0.04):
+            if not self._ik_move(ctx, self.candidate.grasp, holding=False, finger_opening=0.04):
                 return None
             self._planning_note = ""
         return self._run_executor(ctx, GraspState.CLOSE, holding=False)
@@ -391,18 +443,34 @@ class GraspFSM:
             self._pending_plan = "planning"
             self._planning_note = "lift"
             cur = ctx.arm_q
-            lift_q = self.ik.solve(
-                Pose.make(ctx_ee(ctx) + [0, 0, self.spec.lift_height], GRASP_QUAT_WXYZ),
-                q_init=cur,
-                n_restarts=6,
-                validate=lambda q: self.checker.check_state(q, 0.02, holding_cube=True).valid,
-            )
-            if not lift_q.success:
-                self._fail(f"LIFT: IK failed for lift pose: {lift_q.message}")
-                return None
-            target = lift_q.arm_q
-            if not self.checker.check_segment(cur, target, 0.02, holding_cube=True, allow_cube_rest=True).valid:
-                self._fail("LIFT: vertical segment not collision-free while carrying")
+            # Break-away semantics: the cube rests on its support (table /
+            # pedestal / shelf) and the gripper legitimately grazes that
+            # support while lifting off. Exactly those pairs are tolerated
+            # (discovered from shadow physics), everything else stays strict.
+            lift_quat = self.candidate.quat_wxyz if self.candidate is not None else GRASP_QUAT_WXYZ
+            breakaway = self._engine_breakaway_pairs()
+            self.checker.extra_allowed_pairs |= breakaway
+            try:
+                lift_q = self.ik.solve(
+                    Pose.make(ctx_ee(ctx) + [0, 0, self.spec.lift_height], lift_quat),
+                    q_init=cur,
+                    n_restarts=6,
+                    validate=lambda q: self.checker.check_state(q, 0.02, holding_cube=True).valid,
+                )
+                if not lift_q.success:
+                    self._fail(f"LIFT: IK failed for lift pose: {lift_q.message}")
+                    return None
+                target = lift_q.arm_q
+                lift_rep = self.checker.check_segment(
+                    cur, target, 0.02, holding_cube=True, allow_cube_rest=True
+                )
+            finally:
+                self.checker.extra_allowed_pairs -= breakaway
+            if not lift_rep.valid:
+                self._fail(
+                    "LIFT: vertical segment not collision-free while carrying "
+                    f"[{lift_rep.message}]"
+                )
                 return None
             try:
                 self._executor = TrajectoryExecutor(self.traj_gen.generate([cur, target]))
@@ -430,7 +498,7 @@ class GraspFSM:
         if self._pending_plan is None:
             self._pending_plan = "planning"
             self._planning_note = "planning transfer"
-            pose = place_pregrasp_pose(self.spec.place_target, self.spec.cube_half, self.spec.surface_z)
+            pose = place_pregrasp_for(self.candidate, self.spec.place_target, self.spec.cube_half, self.spec.surface_z)
             res = self.ik.solve(
                 pose,
                 q_init=ctx.arm_q,
@@ -450,7 +518,7 @@ class GraspFSM:
         if self._pending_plan is None:
             self._pending_plan = "planning"
             self._planning_note = "place descent"
-            pose = place_pose(self.spec.place_target, self.spec.cube_half, self.spec.surface_z)
+            pose = place_pose_for(self.candidate, self.spec.place_target, self.spec.cube_half, self.spec.surface_z)
             # descend until the cube bottom rests on the surface
             res = self.ik.solve(
                 pose,
@@ -516,8 +584,9 @@ class GraspFSM:
             self._pending_plan = "planning"
             self._planning_note = "retreat"
             cur = ctx.arm_q
+            ret_quat = self.candidate.quat_wxyz if self.candidate is not None else GRASP_QUAT_WXYZ
             up = self.ik.solve(
-                Pose.make(ctx_ee(ctx) + [0, 0, self.spec.lift_height], GRASP_QUAT_WXYZ),
+                Pose.make(ctx_ee(ctx) + [0, 0, self.spec.lift_height], ret_quat),
                 q_init=cur,
                 n_restarts=4,
                 validate=lambda q: self.checker.check_state(q, 0.04, holding_cube=True, allow_cube_rest=True).valid,

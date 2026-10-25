@@ -122,13 +122,24 @@ def test_gripper_cube_contact_whitelist(tabletop):
     assert violation_pairs(rep_free) & grasp_pairs, "free mode missed finger-cube interpenetration"
     # Holding mode: the squeeze IS the grasp and must be whitelisted.
     assert not (violation_pairs(rep_hold) & grasp_pairs), "holding mode flagged the grasp itself"
-    # Arm-vs-world violations must be identical across modes (same config);
-    # grasp pairs AND rest pairs (cube-table) are mode-dependent by design.
-    rest_pairs = checker.rest_body_pairs
-    assert (
-        violation_pairs(rep_free) - grasp_pairs - rest_pairs
-        == violation_pairs(rep_hold) - grasp_pairs - rest_pairs
-    ), "arm-vs-world violations inconsistent between modes"
+    # Semantic split (see CollisionChecker._pair_allowed): in FREE mode the
+    # cube resting on its support is physics -> NO cube-env violations; in
+    # HOLD mode the carried cube must clear the environment -> cube-env
+    # contacts ARE violations. Arm-vs-world (non-cube) violations must be
+    # identical across modes (same configuration).
+    def cube_env_pairs(pairs):
+        gripper = {"left_finger", "right_finger", "hand"}
+        return {p for p in pairs if "cube" in p and not (set(p) & gripper)}
+
+    assert not (violation_pairs(rep_free) & cube_env_pairs(violation_pairs(rep_free))), (
+        "free mode flagged the resting object's support contacts"
+    )
+    assert violation_pairs(rep_hold) & cube_env_pairs(violation_pairs(rep_hold)), (
+        "holding mode should flag the carried cube touching the table"
+    )
+    arm_world_free = violation_pairs(rep_free) - grasp_pairs - cube_env_pairs(violation_pairs(rep_free))
+    arm_world_hold = violation_pairs(rep_hold) - grasp_pairs - cube_env_pairs(violation_pairs(rep_hold))
+    assert arm_world_free == arm_world_hold, "arm-vs-world violations inconsistent between modes"
 
 
 def test_joint_limit_violation_reported(checker):

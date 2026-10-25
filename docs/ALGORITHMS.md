@@ -104,6 +104,36 @@ Measured from the menagerie collision model (not assumed):
 Top-down grasp: hand +z aligned with world -z (quaternion (0,1,0,0));
 fingers close along world y gripping two opposite cube faces.
 
+## 6b. Antipodal grasp candidate generation (`manipulation/grasp.py`)
+
+For an axis-aligned cube the valid pad oppositions are the 6 face normals;
+the bottom face is unreachable through the support. Candidates are generated
+in preference order:
+
+1. top-down (a = world -z; most stable, keeps the wrist clear of the table)
+2. four horizontal side grasps (a = ±x/±y; hand +z = a, fingers closing
+   along the world horizontal axis)
+
+Hand orientation: hand +z is pinned to the approach direction a; for
+horizontal approaches the hand x-axis is set to world up so the fingers
+close horizontally (R = [x_h, y_h, z_h], quaternion via Shepperd). Grasp
+pose: pads on the cube centre-line, hand origin one GRASP_LIFT back along
+-a; pregrasp = grasp + PREGRASP_CLEARANCE back along -a.
+
+Selection is declarative: the FSM takes the FIRST candidate whose pregrasp
+IK is collision-free AND reachable by a collision-free plan. In the
+``roof_grasp`` scene a low roof makes every top-down configuration collide,
+so the planner automatically falls back to a horizontal side grasp - and
+completes the shelf-to-shelf transfer physically (measured in the grasp
+benchmark category ``roof_side``).
+
+Break-away semantics (found the hard way, kept honest): at lift-off the cube
+still rests on its support and the gripper grazes that support (measured
+~0.1 mm hand-pedestal contact on side grasps). The support pairs are
+discovered from the LIVE engine contact list (the shadow checker's list is
+unstable exactly at the contact boundary, dist ~ 0) and temporarily
+whitelisted for the lift validation only, via try/finally.
+
 ## 7. Sampling-based planning (`planning/rrt.py`)
 
 Both planners share the unified API (start, goal, checker, seed, time

@@ -1,0 +1,29 @@
+{
+  "empty": {
+    "n": 10,
+    "median_legacy_s": 6.892157268910932,
+    "median_topp_s": 2.8664646746588485,
+    "median_reduction_pct": 58.078428828804604,
+    "min_reduction_pct": 0.0,
+    "max_reduction_pct": 67.68174591748024,
+    "all_feasible": true
+  },
+  "tabletop": {
+    "n": 10,
+    "median_legacy_s": 1.9844493359054636,
+    "median_topp_s": 1.9844493359054636,
+    "median_reduction_pct": 0.0,
+    "min_reduction_pct": 0.0,
+    "max_reduction_pct": 0.0,
+    "all_feasible": true
+  },
+  "single_obs": {
+    "n": 10,
+    "median_legacy_s": 1.9844493359054636,
+    "median_topp_s": 1.9844493359054636,
+    "median_reduction_pct": 0.0,
+    "min_reduction_pct": 0.0,
+    "max_reduction_pct": 0.0,
+    "all_feasible": true
+  }
+}

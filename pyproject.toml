@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robotstudio"
-version = "1.0.0"
-description = "RobotStudio - Interactive Robot Motion Planning & Manipulation Studio (Franka Panda + MuJoCo)"
+version = "1.2.0"
+description = "PandaForge (package: robotstudio) - Interactive Robot Motion Planning & Manipulation Studio (Franka Panda + MuJoCo)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -60,6 +60,7 @@ ignore = [
 "src/robotstudio/collision/checker.py" = ["N806"]
 "src/robotstudio/manipulation/fsm.py" = ["N806"]
 "src/robotstudio/planning/rrt_star.py" = ["N806"]
+"src/robotstudio/manipulation/grasp.py" = ["N806"]
 "src/robotstudio/simulation/engine.py" = ["N806"]
 "tests/*" = ["N802", "N803", "N806"]
 # Qt overrides use Qt's camelCase names.

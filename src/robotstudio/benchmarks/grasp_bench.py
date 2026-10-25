@@ -38,7 +38,7 @@ def _physical_success(snapshot, place_xy, cube_start, tol=0.035) -> tuple[bool, 
     return False, f"xy_err={xy_err * 1000:.0f}mm on_table={on_table} moved={moved} open={open_gripper}"
 
 
-def run_grasp_benchmark(base_runs: int = 20, jitter_runs: int = 10, hard_runs: int = 5, impossible_runs: int = 3, speed: float = 3.0, seed: int = 2028) -> dict:
+def run_grasp_benchmark(base_runs: int = 20, jitter_runs: int = 10, hard_runs: int = 5, impossible_runs: int = 3, roof_runs: int = 5, speed: float = 3.0, seed: int = 2028) -> dict:
     rows = []
     eng = SimulationEngine(scene_name="tabletop", headless=True)
     eng.start(with_viewer=False)
@@ -95,6 +95,56 @@ def run_grasp_benchmark(base_runs: int = 20, jitter_runs: int = 10, hard_runs: i
         return row
 
     rng = np.random.default_rng(seed)
+
+    # ---- shelf-to-shelf side-grasp trials (roof blocks the top approach) ----
+    from robotstudio.simulation.scenes import preset_scenes as _ps
+
+    for _ in range(roof_runs):
+        eng.apply_scene_spec(_ps()["roof_grasp"])
+        eng.reset()
+        time.sleep(0.3)
+        snap0 = eng.snapshot()
+        cube_start = snap0.cube_pos.copy()
+        spec = GraspTaskConfig(
+            cube_start=tuple(cube_start),
+            cube_half=0.025,
+            place_target=(0.45, -0.20, 0.0),
+            surface_z=0.50,
+            seed=seed,
+            lift_height=0.06,
+        )
+        fsm = GraspFSM(eng, spec)
+        eng.set_controller(fsm)
+        fsm.start()
+        t0 = time.perf_counter()
+        while time.perf_counter() - t0 < 300.0 and not fsm.is_terminal:
+            time.sleep(0.05)
+        wall = time.perf_counter() - t0
+        final = eng.snapshot()
+        side_used = fsm.candidate is not None and not fsm.candidate.is_top
+        phys_ok = (
+            fsm.state == GraspState.SUCCESS
+            and float(np.linalg.norm(final.cube_pos[:2] - np.array([0.45, -0.20]))) <= 0.035
+            and 0.49 <= final.cube_pos[2] <= 0.57
+        )
+        rows.append(
+            {
+                "kind": "roof_side",
+                "cube_x": float(cube_start[0]),
+                "cube_y": float(cube_start[1]),
+                "place_x": 0.45,
+                "place_y": -0.20,
+                "fsm_state": fsm.state.value,
+                "physical_check": f"side_grasp_used={side_used}",
+                "success": bool(phys_ok and side_used),
+                "wall_time_s": wall,
+                "sim_time_s": final.sim_time,
+                "error": fsm.error or "",
+            }
+        )
+        eng.set_controller(None)
+        log.info("roof_side trial -> %s (side grasp: %s)", phys_ok, side_used)
+
     for _ in range(base_runs):
         one_trial("base", (0.55, 0.0), (0.55, -0.30), expect_fail=False)
     for _ in range(jitter_runs):
@@ -119,7 +169,7 @@ def run_grasp_benchmark(base_runs: int = 20, jitter_runs: int = 10, hard_runs: i
         w.writerows(rows)
 
     summary: dict = {}
-    for kind in ("base", "jitter", "hard_place", "impossible"):
+    for kind in ("base", "jitter", "hard_place", "roof_side", "impossible"):
         rs = [r for r in rows if r["kind"] == kind]
         if rs:
             entry = {

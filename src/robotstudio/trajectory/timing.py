@@ -102,12 +102,27 @@ def _segment_time(dq: np.ndarray, vmax: np.ndarray, amax: np.ndarray) -> float:
 
 
 class TrajectoryGenerator:
-    def __init__(self, limits: TrajectoryLimits | None = None, max_scale_iterations: int = 30) -> None:
+    """Trajectory factory.
+
+    ``method="toppra"`` (default) runs the time-optimal TOPP-RA allocation
+    and falls back to the conservative time-scaled spline if TOPP-RA fails;
+    ``method="spline"`` forces the legacy conservative generator.
+    """
+
+    def __init__(self, limits: TrajectoryLimits | None = None, max_scale_iterations: int = 30, method: str = "toppra") -> None:
         self.limits = limits or TrajectoryLimits.from_panda()
         self.max_scale_iterations = max_scale_iterations
+        self.method = method
 
     def generate(self, path: list[np.ndarray] | np.ndarray) -> Trajectory:
         """Time-parameterize a (N,7) waypoint path into a feasible Trajectory."""
+        if self.method == "toppra" and np.asarray(path).shape[0] >= 3:
+            try:
+                from robotstudio.trajectory.toppra import ToppRaGenerator
+
+                return ToppRaGenerator(self.limits).generate(path)
+            except TrajectoryGenerationError:
+                pass  # fall through to the conservative generator
         arr = np.asarray(path, dtype=float)
         if arr.ndim != 2 or arr.shape[1] != 7:
             raise TrajectoryGenerationError(f"path must be (N,7), got shape {arr.shape}")

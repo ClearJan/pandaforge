@@ -288,10 +288,10 @@ class SimulationEngine:
         cube_jadr = m.jnt_qposadr[m.joint("cube_joint").id]
         cube_vadr = m.jnt_dofadr[m.joint("cube_joint").id]
         if spec.cube_enabled:
-            x, y, _ = spec.cube_pos
-            surf = spec.table.top_height if spec.table.enabled else 0.0
-            z = surf + spec.cube_size
-            d.qpos[cube_jadr : cube_jadr + 3] = [x, y, z]
+            # spawn at the spec's own height: presets already encode the
+            # correct resting height for their support (table OR pedestal)
+            d.qpos[cube_jadr : cube_jadr + 3] = spec.cube_pos
+            d.qpos[cube_jadr + 3 : cube_jadr + 7] = [1, 0, 0, 0]
             d.qpos[cube_jadr + 3 : cube_jadr + 7] = [1, 0, 0, 0]
             d.qvel[cube_vadr : cube_vadr + 6] = 0
         else:
@@ -465,7 +465,12 @@ class SimulationEngine:
             else:
                 self._controller_status = "idle"
         elif isinstance(cmd, ResetCmd):
+            # reset to the CURRENT scene's canonical state: the keyframe
+            # restores the loaded XML's initial world, which may be a
+            # different preset than the live spec (union layout) - so the
+            # spec is re-applied on top, exactly like a scene switch.
             self._reset_to_home()
+            self._apply_scene_to_model(self._scene_spec)
         elif isinstance(cmd, ApplySceneCmd):
             # Controllers may opt into surviving a scene switch (e.g. the
             # showcase sequencer drives the switch itself); plain controllers

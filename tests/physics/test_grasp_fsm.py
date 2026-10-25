@@ -91,6 +91,69 @@ def test_full_pick_and_place_success(grasp_engine):
         assert required in visited, f"phase {required.value} never visited: {[s.value for s in visited]}"
 
 
+def test_roof_blocked_falls_back_to_side_grasp():
+    """Shelf pick: top approach blocked by a roof -> automatic SIDE grasp.
+
+    The candidate generator must reject the top-down pose (roof collision)
+    and the FSM must complete the whole task with a horizontal grasp,
+    judged by the same physical criteria as the top-grasp test.
+    """
+    from robotstudio.manipulation.fsm import GraspFSM, GraspState, GraspTaskConfig
+
+    eng = SimulationEngine(scene_name="roof_grasp", headless=True)
+    eng.start(with_viewer=False)
+    eng.set_speed(3.0)
+    try:
+        import time as _t
+
+        _t.sleep(0.6)
+        snap = eng.snapshot()
+        spec = GraspTaskConfig(
+            cube_start=tuple(snap.cube_pos),
+            cube_half=0.025,
+            place_target=(0.45, -0.20, 0.0),
+            surface_z=0.50,
+            seed=2028,
+            lift_height=0.06,
+        )
+        fsm = GraspFSM(eng, spec)
+        eng.set_controller(fsm)
+        fsm.start()
+        t0 = time.perf_counter()
+        while time.perf_counter() - t0 < 240.0 and not fsm.is_terminal:
+            time.sleep(0.1)
+        assert fsm.state == GraspState.SUCCESS, f"{fsm.state.value}: {fsm.error}"
+        # the chosen candidate MUST be a side grasp (top is blocked by the roof)
+        assert fsm.candidate is not None and not fsm.candidate.is_top
+        # physical evidence
+        final = eng.snapshot()
+        xy_err = float(np.linalg.norm(final.cube_pos[:2] - np.array([0.45, -0.20])))
+        assert xy_err <= 0.035
+        assert 0.49 <= final.cube_pos[2] <= 0.57  # resting on the place pedestal
+    finally:
+        eng.stop()
+
+
+def test_grasp_candidate_generation_properties():
+    """Unit properties of the antipodal candidate generator."""
+    from robotstudio.manipulation.grasp import grasp_candidates
+
+    cube = np.array([0.45, 0.18, 0.525])
+    cands = grasp_candidates(cube, 0.025)
+    assert len(cands) == 5  # top + 4 sides
+    assert cands[0].is_top and not any(c.is_top for c in cands[1:])
+    for c in cands:
+        # approach is hand +z: pregrasp sits BACK along the approach
+        offset = c.pregrasp.pos - c.grasp.pos
+        assert np.allclose(offset, -c.approach * np.linalg.norm(offset), atol=1e-9)
+        # hand origin one GRASP_LIFT from the cube centre, along -a
+        assert np.allclose(c.grasp.pos, cube - c.approach * 0.1079, atol=1e-3)
+    # top candidate matches the legacy top-down frame
+    assert abs(cands[0].quat_wxyz @ np.array([0.0, 1.0, 0.0, 0.0])) > 0.999 or np.allclose(
+        cands[0].quat_wxyz, [0.0, 1.0, 0.0, 0.0], atol=1e-9
+    )
+
+
 def test_grasp_rejects_unreachable_place(grasp_engine):
     """A place target outside the workspace must fail with a clear reason."""
     eng = grasp_engine

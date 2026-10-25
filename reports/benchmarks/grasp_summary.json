@@ -2,21 +2,26 @@
   "base": {
     "n": 20,
     "success_rate": 1.0,
-    "median_wall_s": 2.8711045999953058
+    "median_wall_s": 2.870886549993884
   },
   "jitter": {
     "n": 10,
     "success_rate": 1.0,
-    "median_wall_s": 2.871849699993618
+    "median_wall_s": 2.871148149977671
   },
   "hard_place": {
     "n": 5,
     "success_rate": 1.0,
-    "median_wall_s": 2.8719522999599576
+    "median_wall_s": 2.873677499999758
+  },
+  "roof_side": {
+    "n": 5,
+    "success_rate": 1.0,
+    "median_wall_s": 4.598754600039683
   },
   "impossible": {
     "n": 3,
-    "success_rate": 1.0,
-    "median_wall_s": 1.7627611000207253
+    "median_wall_s": 1.813743999984581,
+    "correct_rejection_rate": 1.0
   }
 }

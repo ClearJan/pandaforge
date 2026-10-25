@@ -144,14 +144,40 @@ Reading (honest):
 ![RRT* cost convergence](charts/rrt_star_convergence.png)
 ![RRT* path quality](charts/rrt_star_quality.png)
 
-## 5. Collision checker performance
+## 5. TOPP-RA time-optimal parameterization
+
+Protocol (`toppra_bench.py`): RRT-Connect RAW paths (shortcutting disabled -
+multi-waypoint paths are TOPP-RA's domain), 10 fixed seeds per scene; the
+same geometric path (the legacy clamped spline) is traversed with (a) the
+conservative trapezoidal allocation and (b) TOPP-RA re-timing of that exact
+geometry. A DOMINANCE GUARANTEE returns the faster of the two, so reported
+numbers are never worse than legacy by construction.
+
+| scene | n | median legacy | median TOPP-RA | median reduction | range |
+|---|---|---|---|---|---|
+| empty (long random paths) | 10 | 6.89 s | 2.87 s | **58.1%** | 0 – 67.7% |
+| tabletop (short 2-segment paths) | 10 | 1.98 s | 1.98 s | 0% (legacy already near-optimal) | 0% |
+| single_obs | 10 | 1.98 s | 1.98 s | 0% | 0% |
+
+Reading: on long multi-segment paths TOPP-RA cuts execution time by more
+than half while staying numerically within joint limits (all_feasible=true
+everywhere). On short 2-segment paths the conservative allocation is already
+near-optimal and the dominance guarantee keeps the legacy result - the 0%
+rows are the guarantee working, not a failure. Implementation notes: path
+derivatives are computed on an ARC-LENGTH parameterization of the spline
+(uniform-legacy-time sampling decouples parameter from geometry and spikes
+the refit), the controllable-set pass solves the per-interval acceleration
+constraint exactly (linear in x), and a 0.90 safety factor absorbs the
+spline-refit discretization error.
+
+## 6. Collision checker performance
 
 | operation | measured |
 |---|---|
 | single state check (kinematics + collision + whitelist) | 0.052 ms |
 | 200-state batch | 10.4 ms |
 
-## 6. Optimization record (evidence-based)
+## 7. Optimization record (evidence-based)
 
 | change | evidence | effect |
 |---|---|---|

@@ -64,11 +64,9 @@ class CollisionChecker:
             frozenset(("hand", "cube")),
             frozenset(("left_finger", "right_finger")),
         }
-        self.rest_body_pairs: set[frozenset[str]] = {
-            frozenset(("cube", "table")),
-            frozenset(("cube", "table_legs")),
-            frozenset(("cube", "world")),  # floor plane lives in the world body
-        }
+        # (rest pairs are handled semantically - cube-vs-environment is
+        # allowed in free mode regardless of which body supports the object)
+        self.rest_body_pairs: set[frozenset[str]] = set()
         # Extra user-supplied allowances (tests / special scenes).
         self.extra_allowed_pairs: set[frozenset[str]] = set()
         # Carried-cube transform (grasp FSM): while set, every checked
@@ -93,6 +91,30 @@ class CollisionChecker:
 
     # ------------------------------------------------------------------ #
     # ------------------------------------------------------------------ #
+    def cube_contact_pairs(self, arm_q: np.ndarray, finger_opening: float) -> set[frozenset[str]]:
+        """Body-name pairs currently contacting the shadow cube at ``arm_q``.
+
+        The FSM uses this at lift/retreat time to temporarily allow the
+        cube's support contacts (table, pedestal, ...) while it breaks away -
+        whatever the cube currently rests on, discovered from physics rather
+        than hardcoded.
+        """
+        m, d = self.model, self.data
+        d.qpos[self.robot.arm_qposadr] = arm_q
+        d.qpos[self.robot.finger_qposadr] = finger_opening
+        d.qvel[:] = 0
+        mujoco.mj_kinematics(m, d)
+        mujoco.mj_comPos(m, d)
+        mujoco.mj_collision(m, d)
+        pairs: set[frozenset[str]] = set()
+        for i in range(d.ncon):
+            con = d.contact[i]
+            b1, b2 = self._body_name(int(con.geom1)), self._body_name(int(con.geom2))
+            pair = frozenset((b1, b2))
+            if "cube" in pair:
+                pairs.add(pair)
+        return pairs
+
     def set_shadow_cube_pose(self, pos: np.ndarray, quat_wxyz: np.ndarray) -> None:
         """Pin the shadow-data cube at a known world pose (post-release checks)."""
         if self._cube_qposadr is None:
@@ -109,14 +131,36 @@ class CollisionChecker:
         return str(mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, bid))
 
     def _pair_allowed(self, g1: int, g2: int, holding_cube: bool, allow_cube_rest: bool = False) -> bool:
+        """Mode-dependent contact semantics.
+
+        - free mode (path planning, not holding): the object RESTING on any
+          support is physics, not a planning fault -> cube-vs-environment
+          contacts are ignored (supports are arbitrary bodies and cannot be
+          enumerated); arm-vs-cube and arm-vs-environment stay STRICT.
+        - holding mode (transfer with the carried-object transform): the
+          cube's pose follows the gripper, so cube-vs-environment means the
+          carried object is sweeping into something -> forbidden, unless
+          ``allow_cube_rest`` (break-away during lift/retreat).
+        - gripper-vs-cube (grasp pairs): the grasp itself -> only in
+          holding mode.
+        """
         b1, b2 = self._body_name(g1), self._body_name(g2)
         pair = frozenset((b1, b2))
         if pair in self.extra_allowed_pairs:
             return True
-        if pair in self.grasp_body_pairs:
-            return holding_cube
-        if pair in self.rest_body_pairs:
-            return allow_cube_rest or not holding_cube
+        gripper = {"left_finger", "right_finger", "hand"}
+        is_grasp_pair = pair in self.grasp_body_pairs
+        is_cube_env = "cube" in pair and not (set(pair) & gripper)
+        if holding_cube:
+            if is_grasp_pair:
+                return True
+            if is_cube_env:
+                return allow_cube_rest
+            return False
+        if is_grasp_pair:
+            return False  # a free path must not touch the object
+        if is_cube_env:
+            return True  # object resting on its support: not a planning fault
         return False
 
     def _check_single(self, arm_q: np.ndarray, finger_opening: float, holding_cube: bool, allow_cube_rest: bool = False) -> list[tuple[str, str, float]]:

@@ -25,10 +25,10 @@ def main(argv: list[str] | None = None) -> int:
     from robotstudio.utils.logging import get_logger
 
     log = get_logger("app")
-    log.info("RobotStudio starting (scene=%s)", scene)
+    log.info("PandaForge starting (scene=%s)", scene)
 
     app = QApplication(argv)
-    app.setApplicationName("RobotStudio")
+    app.setApplicationName("PandaForge")
     font = app.font()
     font.setFamily("Segoe UI")
     font.setPointSizeF(9.5)
@@ -45,7 +45,7 @@ def main(argv: list[str] | None = None) -> int:
 
     exit_code = app.exec()
     engine.stop()
-    log.info("RobotStudio exited (code=%d)", exit_code)
+    log.info("PandaForge exited (code=%d)", exit_code)
     return exit_code
 
 

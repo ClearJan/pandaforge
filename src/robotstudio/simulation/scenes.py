@@ -318,6 +318,34 @@ def preset_scenes() -> dict[str, SceneSpec]:
                 ),
             ],
         ),
+        "roof_grasp": SceneSpec(
+            name="roof_grasp",
+            description="Shelf-to-shelf transfer: a roof blocks the top-down "
+            "approach, so the grasp planner falls back to a horizontal side "
+            "grasp; the place target sits on a matching pedestal.",
+            cube_pos=(0.45, 0.18, 0.525),
+            place_pos=(0.45, -0.20, 0.425),
+            obstacles=[
+                BoxObstacle(
+                    name="roof_obstacle",
+                    size=(0.085, 0.085, 0.012),
+                    pos=(0.45, 0.18, 0.665),
+                    rgba=(0.85, 0.35, 0.2, 0.75),
+                ),
+                BoxObstacle(
+                    name="pedestal",
+                    size=(0.06, 0.06, 0.05),
+                    pos=(0.45, 0.18, 0.45),
+                    rgba=(0.5, 0.5, 0.55, 1.0),
+                ),
+                BoxObstacle(
+                    name="place_pedestal",
+                    size=(0.06, 0.06, 0.05),
+                    pos=(0.45, -0.20, 0.45),
+                    rgba=(0.5, 0.5, 0.55, 1.0),
+                ),
+            ],
+        ),
     }
     return scenes
 

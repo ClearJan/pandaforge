@@ -85,7 +85,7 @@ class MainWindow(QMainWindow):
 
         self._engine_errors: _queue.Queue = _queue.Queue()
 
-        self.setWindowTitle("RobotStudio — Interactive Robot Motion Planning & Manipulation Studio")
+        self.setWindowTitle("PandaForge — Interactive Robot Motion Planning & Manipulation Studio")
         self.resize(1280, 860)
         self.setStyleSheet(DARK_QSS)
         self._build_ui()

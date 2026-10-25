@@ -2,18 +2,19 @@
 
 Test suite: `pytest tests` on 2026-10-25, Windows 11, Python 3.11.9,
 pytest 9.1.1 + pytest-timeout. QT runs with the offscreen platform except
-the viewer tests, which open a REAL MuJoCo window (skipped on display-less CI). Result: **64 passed, 0 failed, 0 skipped** (incl. real-viewer and showcase runs).
+the viewer tests, which open a REAL MuJoCo window (skipped on display-less CI). Result: **73 passed, 0 failed, 0 skipped** (incl. real-viewer and showcase runs).
 
 Legend: PASS / FAIL / SKIP / BLOCKED / NOT RUN — nothing below is
 pre-filled; every PASS row corresponds to a real executed test.
 
-## Unit tests (`tests/unit/`) — 42 tests, all PASS
+## Unit tests (`tests/unit/`) — 49 tests, all PASS
 
 | Test file | Covers | Result |
 |---|---|---|
 | test_kinematics.py (13) | quaternion/matrix round-trip; SO(3) error incl. near-pi branch; FK home sanity; **Jacobian frame convention via finite differences**; IK 100-pose acceptance (≥95% required, got 100%); out-of-reach rejection; joint-limit compliance; multi-start; tolerance fields | PASS |
 | test_collision.py (7) | home config collision-free; endpoint collision detection; **checker vs mj_forward parity** (30 random states); mid-segment penetration caught (both endpoints free); gripper-cube whitelist semantics in both modes; joint-limit reporting; path validation sampling | PASS |
 | test_planners.py (8) | RRT-Connect invariants on blocked task + independent re-validation; RRT on open task; RRT-Connect efficiency vs RRT; impossible goal fails cleanly (no fake path); linear baseline refuses blocked / accepts free; **seed determinism (identical path)**; shortcutting reduces length + stays valid | PASS |
+| test_toppra.py (7) | TOPP-RA never slower than the conservative generator (20 random paths); numeric limit compliance; zero boundary velocities; endpoint/time clamping; duplicate-waypoint and 2-point degeneracy; default-factory dominance; tiny-limit feasibility | PASS |
 | test_rrt_star.py (5) | RRT\* solves and its RAW path cost never exceeds RRT's (same seed); cost history monotone; Informed solves; informed sampler produces points provably inside the admissible ellipsoid (exact inverse-transform check, 300 samples); determinism; k(n) bound sanity | PASS |
 | test_trajectory.py (9) | generated trajectories respect v/a limits; endpoints; time clamping; long-jump stretching; degenerate path rejection; tiny-limits feasibility; zero-rescale-budget raise; Panda limit spec; C1 velocity continuity at waypoints | PASS |
 
@@ -27,13 +28,15 @@ pre-filled; every PASS row corresponds to a real executed test.
 | test_infeasible_trajectory_is_refused | hand-built too-fast trajectory rejected before execution | PASS |
 | test_estop_freezes_motion | e-stop mid-trajectory holds targets (drift < 0.05 rad) | PASS |
 
-## Physics tests (`tests/physics/`) — 3 tests, all PASS
+## Physics tests (`tests/physics/`) — 5 tests, all PASS
 
 | Test | What it proves | Result |
 |---|---|---|
 | test_full_pick_and_place_success | the full FSM chain physically grasps and places the cube; independent post-check (xy ≤ 35 mm, resting z, moved > 150 mm, gripper open); ALL 11 states visited in order | PASS |
 | test_grasp_rejects_unreachable_place | out-of-reach place target fails with a clear reason | PASS |
 | test_abort_stops_task | user abort reaches ABORTED and the arm stops | PASS |
+| test_roof_blocked_falls_back_to_side_grasp | roof blocks the top approach -> automatic SIDE grasp; full shelf-to-shelf transfer verified physically (candidate must be non-top) | PASS |
+| test_grasp_candidate_generation_properties | 5 antipodal candidates, top first, pregrasp offset along -approach, legacy top frame preserved | PASS |
 
 ## GUI tests (`tests/gui/`) — 6 tests, all PASS (offscreen Qt)
 
