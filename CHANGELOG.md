@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.5.2 — 2026-10-25
+
+### Release-blocking fix (found by the 10-pass release audit)
+- pyproject.toml declared `PySide6` while the project installs
+  `PySide6-Essentials`: `pip check` reported broken requirements and a
+  fresh install would pull the full PySide6. Corrected to
+  `PySide6-Essentials>=6.6`; `pip check` clean.
+
+### Audit
+- 10-pass release verification executed (tests/lint, demo claim chain,
+  packaged self-test, 7-preset scene cycling, doc links + image assets,
+  benchmark claims recomputed from raw CSVs, architecture separation,
+  TOPP-RA dominance + planner determinism re-verified live, release
+  config, reproducibility contract). All green; one probe-script bug on
+  our side was triaged and confirmed NOT a product defect (the planner
+  correctly rejected an out-of-limits goal).
+
 ## 1.5.1 — 2026-10-25
 
 ### Documentation positioning
