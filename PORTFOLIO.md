@@ -1,4 +1,7 @@
-# Portfolio — RobotStudio as an interview project
+# Portfolio — PandaForge as an interview project
+
+> Written for the reader this repo most wants to impress: the technical
+> interviewer. Everything below links to committed evidence.
 
 A one-page technical summary for job applications: what I built, what is
 genuinely hard in it, what the measured results are, and where to look in the

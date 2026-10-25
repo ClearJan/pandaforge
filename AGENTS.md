@@ -1,4 +1,12 @@
-# AGENTS.md — RobotStudio Multi-Agent Development Charter
+# AGENTS.md — Multi-Agent Development Charter
+
+> **Why this file exists:** this repository was built by an autonomous
+> multi-agent development process. This charter records the REAL role
+> boundaries, shared interfaces and review rules that governed that work —
+> it doubles as the contributor contract (see CONTRIBUTING.md) and as the
+> architectural constitution for anyone (human or agent) extending the
+> project. The project's public name is **PandaForge**; the Python package
+> remains `robotstudio`.
 
 This repository was developed by an autonomous agent team. This file records
 the REAL constraints, role boundaries, shared interfaces and review rules that

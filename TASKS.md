@@ -1,4 +1,10 @@
-# RobotStudio — Task Register
+# Task Register
+
+> **Why this file exists:** a public development ledger. Every task maps to
+> its acceptance evidence (test file or committed benchmark data) — this is
+> the project's "nothing is claimed without proof" page. Historical statuses
+> were accurate at the time of writing; the current truth is the test suite
+> plus `reports/TEST_REPORT.md`.
 
 Status legend: `PENDING` / `IN_PROGRESS` / `DONE` / `BLOCKED` / `DROPPED`.
 A task may only be marked DONE with concrete acceptance evidence (test file

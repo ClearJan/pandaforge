@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.1 — 2026-10-25
+
+### Documentation positioning
+- Purpose headers on the three process files (AGENTS.md, TASKS.md,
+  PORTFOLIO.md) so a first-time reviewer understands why they exist and how
+  they relate to the contributor contract.
+
 ## 1.5.0 — 2026-10-25
 
 ### Project quality signals
