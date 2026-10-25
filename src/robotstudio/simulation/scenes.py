@@ -65,6 +65,32 @@ class CylinderObstacle:
 
 
 @dataclass
+class MovingObstacleSpec:
+    """Kinematic obstacle on a deterministic sinusoidal script (mocap body).
+
+    The pose is a pure function of simulation time, so planning against it
+    stays deterministic and the executor can guard with a time horizon.
+    """
+
+    enabled: bool = False
+    size: tuple[float, float, float] = (0.02, 0.12, 0.12)  # half-extents, m
+    center: tuple[float, float, float] = (0.45, 0.0, 0.55)
+    axis: tuple[float, float, float] = (0.0, 1.0, 0.0)  # sweep direction
+    amplitude: float = 0.35  # m, sweep half-range along the axis
+    period: float = 7.0  # s
+    phase: float = 0.0  # rad
+    rgba: tuple[float, float, float, float] = (0.9, 0.55, 0.15, 0.9)
+
+    def pose_at(self, t: float) -> tuple[float, float, float]:
+        off = self.amplitude * np.sin(2.0 * np.pi * t / self.period + self.phase)
+        a = np.asarray(self.axis, dtype=float)
+        a = a / max(np.linalg.norm(a), 1e-9)
+        c = np.asarray(self.center, dtype=float)
+        p = c + a * off
+        return (float(p[0]), float(p[1]), float(p[2]))
+
+
+@dataclass
 class TableSpec:
     enabled: bool = True
     top_height: float = 0.40  # z of the table surface, m
@@ -88,6 +114,7 @@ class SceneSpec:
     # placement goal marker (mocap target, visual only; physics uses tolerance check)
     place_enabled: bool = True
     place_pos: tuple[float, float, float] = (0.55, -0.3, 0.425)
+    moving_obstacle: MovingObstacleSpec = field(default_factory=MovingObstacleSpec)
     max_cube_pos: tuple[float, float, float] | None = None  # for randomization
 
     def to_dict(self) -> dict:
@@ -115,6 +142,7 @@ class SceneSpec:
             cube_rgba=d.get("cube_rgba", (0.2, 0.6, 0.9, 1.0)),
             place_enabled=d.get("place_enabled", True),
             place_pos=d.get("place_pos", (0.55, -0.3, 0.425)),
+            moving_obstacle=MovingObstacleSpec(**d.get("moving_obstacle", {})),
             max_cube_pos=d.get("max_cube_pos"),
         )
 
@@ -233,6 +261,15 @@ def build_scene_xml(spec: SceneSpec) -> str:
         "    </body>\n"
     )
 
+    # --- moving obstacle (mocap body, always present; parked when off) ---
+    mo = spec.moving_obstacle
+    mo_pos = mo.pose_at(0.0) if mo.enabled else (0.0, 0.0, -5.0)
+    wb.append(
+        f'    <body name="moving_obstacle" mocap="true" pos="{_fmt(mo_pos)}">\n'
+        f'      <geom name="moving_obstacle_geom" type="box" size="{_fmt(mo.size)}" rgba="{_fmt(mo.rgba)}" friction="0.8 0.02 0.001"/>\n'
+        "    </body>\n"
+    )
+
     # --- place marker (always present) ---
     place_pos = spec.place_pos if spec.place_enabled else (0.0, 0.0, -5.0)
     wb.append(
@@ -317,6 +354,25 @@ def preset_scenes() -> dict[str, SceneSpec]:
                     rgba=(0.5, 0.5, 0.55, 0.8),
                 ),
             ],
+        ),
+        "moving_wall": SceneSpec(
+            name="moving_wall",
+            description="A panel sweeps through the workspace on a known script - "
+            "execution is guarded and replans online when the corridor closes.",
+            cube_enabled=False,
+            place_enabled=False,
+            moving_obstacle=MovingObstacleSpec(
+                enabled=True,
+                size=(0.02, 0.12, 0.12),
+                center=(0.45, 0.0, 0.55),
+                axis=(0.0, 1.0, 0.0),
+                amplitude=0.32,
+                period=11.0,
+                # start at the far end of the sweep: t=0 leaves the home
+                # pose free, then the panel sweeps INTO the corridor during
+                # execution (forcing guarded replans)
+                phase=1.5708,
+            ),
         ),
         "roof_grasp": SceneSpec(
             name="roof_grasp",

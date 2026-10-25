@@ -2,17 +2,24 @@
 
 The checker owns a private ``MjData`` ("shadow") so it can run from any
 thread while the engine keeps stepping. Every reported contact pair is
-matched against an EXPLICIT whitelist (body-name pairs). Anything outside
-the whitelist is a violation - there is no implicit allowance.
+matched against an explicit, mode-dependent whitelist.
 
 Modes:
-* ``holding_cube=False`` (default, path planning): any gripper-cube contact
-  is a violation - the free path must not touch the object.
-* ``holding_cube=True`` (grasp/transfer): finger-cube contacts are allowed
-  (they ARE the grasp); cube-environment contacts are checked normally.
+* ``holding_cube=False`` (free paths): arm-vs-cube and arm-vs-environment are
+  violations; the cube resting on ANY support is physics, not a fault
+  (supports are arbitrary bodies and cannot be enumerated).
+* ``holding_cube=True`` (transfer with the carried-object transform): the
+  cube's pose follows the gripper, so cube-vs-environment means the carried
+  object is sweeping into something - forbidden unless ``allow_cube_rest``
+  (break-away); gripper-vs-cube is the grasp itself - allowed.
 
-Path segments are checked with dense interpolation (default max 0.02 rad
-between samples) so mid-segment penetrations are caught, not just endpoints.
+Moving obstacle: with ``moving_obstacle_fn`` set (sim time -> world pos),
+every check validates the obstacle's SWEPT volume over
+``[obstacle_time, obstacle_time + obstacle_swept_window]`` - planners and
+the runtime guard therefore share one semantics (a validated path cannot be
+immediately rejected by the guard, which was the source of replan thrash).
+
+Path segments are checked with dense interpolation (default 0.02 rad).
 """
 
 from __future__ import annotations
@@ -35,7 +42,7 @@ MAX_SEGMENT_STEP_RAD = 0.02
 class CollisionReport:
     valid: bool
     n_samples: int = 0
-    violations: list[tuple[str, str, float]] = field(default_factory=list)  # (body1, body2, dist) worst per pair
+    violations: list[tuple[str, str, float]] = field(default_factory=list)
     first_bad_sample: int | None = None
 
     @property
@@ -47,103 +54,52 @@ class CollisionReport:
 
 
 class CollisionChecker:
-    """Whitelist-based collision checker with its own shadow MjData."""
+    """Whitelist collision checker with its own shadow MjData."""
 
     def __init__(self, model: mujoco.MjModel, robot: PandaRobot) -> None:
         self.model = model
         self.robot = robot
         self.data = mujoco.MjData(model)
-        # Explicit whitelist of allowed contact pairs, by BODY name, per mode.
-        # - grasp pairs: the fingers/palm pressing the cube IS the grasp -> only
-        #   legal while actually holding it (holding_cube=True).
-        # - rest pairs: the cube resting on table/floor is a normal physical
-        #   contact -> only legal while NOT holding it.
+        # grasp pairs: the fingers/palm pressing the cube IS the grasp ->
+        # only legal while holding it
         self.grasp_body_pairs: set[frozenset[str]] = {
             frozenset(("left_finger", "cube")),
             frozenset(("right_finger", "cube")),
             frozenset(("hand", "cube")),
             frozenset(("left_finger", "right_finger")),
         }
-        # (rest pairs are handled semantically - cube-vs-environment is
+        # (rest pairs are handled semantically: cube-vs-environment is
         # allowed in free mode regardless of which body supports the object)
         self.rest_body_pairs: set[frozenset[str]] = set()
-        # Extra user-supplied allowances (tests / special scenes).
+        # temporary relaxations (break-away during lift/retreat etc.)
         self.extra_allowed_pairs: set[frozenset[str]] = set()
-        # Carried-cube transform (grasp FSM): while set, every checked
-        # configuration places the cube at (hand pose ∘ offset) so transfer
-        # paths are validated with the object actually moving with the
-        # gripper. offset = (pos in hand frame (3,), R_hand->cube (3,3)).
+        # carried-cube transform (grasp FSM): while set, every checked
+        # configuration places the cube at (hand pose composed with offset)
         self.cube_carry_offset: tuple[np.ndarray, np.ndarray] | None = None
-        # Cached geom ids grouped by body id.
+        # moving obstacle (scripted): sim time -> world position
+        self.moving_obstacle_fn = None
+        self.obstacle_time: float = 0.0
+        self.obstacle_swept_window: float = 0.6
+        # cached lookups
         self._body_of_geom = np.asarray(model.geom_bodyid).copy()
+        self._cube_qposadr: int | None = None
         try:
-            self._cube_qposadr = int(model.jnt_qposadr[model.joint("cube_joint").id]) if self._has_cube(model) else None
+            if int(model.joint("cube_joint").id) >= 0:
+                self._cube_qposadr = int(model.jnt_qposadr[model.joint("cube_joint").id])
         except (KeyError, ValueError):
             self._cube_qposadr = None
 
-    @staticmethod
-    def _has_cube(model) -> bool:
-        try:
-            model.body("cube")
-            return True
-        except (KeyError, ValueError):
-            return False
-
     # ------------------------------------------------------------------ #
+    # naming / whitelist
     # ------------------------------------------------------------------ #
-    def cube_contact_pairs(self, arm_q: np.ndarray, finger_opening: float) -> set[frozenset[str]]:
-        """Body-name pairs currently contacting the shadow cube at ``arm_q``.
-
-        The FSM uses this at lift/retreat time to temporarily allow the
-        cube's support contacts (table, pedestal, ...) while it breaks away -
-        whatever the cube currently rests on, discovered from physics rather
-        than hardcoded.
-        """
-        m, d = self.model, self.data
-        d.qpos[self.robot.arm_qposadr] = arm_q
-        d.qpos[self.robot.finger_qposadr] = finger_opening
-        d.qvel[:] = 0
-        mujoco.mj_kinematics(m, d)
-        mujoco.mj_comPos(m, d)
-        mujoco.mj_collision(m, d)
-        pairs: set[frozenset[str]] = set()
-        for i in range(d.ncon):
-            con = d.contact[i]
-            b1, b2 = self._body_name(int(con.geom1)), self._body_name(int(con.geom2))
-            pair = frozenset((b1, b2))
-            if "cube" in pair:
-                pairs.add(pair)
-        return pairs
-
-    def set_shadow_cube_pose(self, pos: np.ndarray, quat_wxyz: np.ndarray) -> None:
-        """Pin the shadow-data cube at a known world pose (post-release checks)."""
-        if self._cube_qposadr is None:
-            return
-        self.data.qpos[self._cube_qposadr : self._cube_qposadr + 3] = pos
-        self.data.qpos[self._cube_qposadr + 3 : self._cube_qposadr + 7] = quat_wxyz
-
-    def pair_is_allowed(self, g1: int, g2: int, holding_cube: bool) -> bool:
-        """Public predicate (used by parity tests and diagnostics)."""
-        return self._pair_allowed(g1, g2, holding_cube)
-
     def _body_name(self, gid: int) -> str:
         bid = int(self._body_of_geom[gid])
         return str(mujoco.mj_id2name(self.model, mujoco.mjtObj.mjOBJ_BODY, bid))
 
-    def _pair_allowed(self, g1: int, g2: int, holding_cube: bool, allow_cube_rest: bool = False) -> bool:
-        """Mode-dependent contact semantics.
+    def pair_is_allowed(self, g1: int, g2: int, holding_cube: bool, allow_cube_rest: bool = False) -> bool:
+        return self._pair_allowed(g1, g2, holding_cube, allow_cube_rest)
 
-        - free mode (path planning, not holding): the object RESTING on any
-          support is physics, not a planning fault -> cube-vs-environment
-          contacts are ignored (supports are arbitrary bodies and cannot be
-          enumerated); arm-vs-cube and arm-vs-environment stay STRICT.
-        - holding mode (transfer with the carried-object transform): the
-          cube's pose follows the gripper, so cube-vs-environment means the
-          carried object is sweeping into something -> forbidden, unless
-          ``allow_cube_rest`` (break-away during lift/retreat).
-        - gripper-vs-cube (grasp pairs): the grasp itself -> only in
-          holding mode.
-        """
+    def _pair_allowed(self, g1: int, g2: int, holding_cube: bool, allow_cube_rest: bool = False) -> bool:
         b1, b2 = self._body_name(g1), self._body_name(g2)
         pair = frozenset((b1, b2))
         if pair in self.extra_allowed_pairs:
@@ -163,8 +119,11 @@ class CollisionChecker:
             return True  # object resting on its support: not a planning fault
         return False
 
-    def _check_single(self, arm_q: np.ndarray, finger_opening: float, holding_cube: bool, allow_cube_rest: bool = False) -> list[tuple[str, str, float]]:
-        """Run kinematics+collision for one configuration; return violations."""
+    # ------------------------------------------------------------------ #
+    # single-state checking
+    # ------------------------------------------------------------------ #
+    def _check_once(self, arm_q, finger_opening, holding_cube, allow_cube_rest) -> list[tuple[str, str, float]]:
+        """One kinematics+collision pass on the shadow data (obstacle fixed)."""
         m, d = self.model, self.data
         d.qpos[self.robot.arm_qposadr] = arm_q
         d.qpos[self.robot.finger_qposadr] = finger_opening
@@ -176,20 +135,47 @@ class CollisionChecker:
             R_hand = np.asarray(hand.xmat).reshape(3, 3)
             cube_R = R_hand @ R_rel
             cube_pos = np.asarray(hand.xpos) + R_hand @ pos_rel
-            q = mat_to_quat(cube_R)
             d.qpos[self._cube_qposadr : self._cube_qposadr + 3] = cube_pos
-            d.qpos[self._cube_qposadr + 3 : self._cube_qposadr + 7] = q
+            d.qpos[self._cube_qposadr + 3 : self._cube_qposadr + 7] = mat_to_quat(cube_R)
             mujoco.mj_kinematics(m, d)  # refresh cube geoms
         mujoco.mj_comPos(m, d)
         mujoco.mj_collision(m, d)
-        violations: list[tuple[str, str, float]] = []
+        out: list[tuple[str, str, float]] = []
         for i in range(d.ncon):
             con = d.contact[i]
             g1, g2 = int(con.geom1), int(con.geom2)
             if self._pair_allowed(g1, g2, holding_cube, allow_cube_rest):
                 continue
-            violations.append((self._body_name(g1), self._body_name(g2), float(con.dist)))
-        return violations
+            out.append((self._body_name(g1), self._body_name(g2), float(con.dist)))
+        return out
+
+    def _check_single(self, arm_q, finger_opening, holding_cube, allow_cube_rest=False):
+        """SWEPT check when a moving obstacle is set, single pass otherwise."""
+        if self.moving_obstacle_fn is None:
+            return self._check_once(arm_q, finger_opening, holding_cube, allow_cube_rest)
+        try:
+            mid = int(self.model.body("moving_obstacle").mocapid[0])
+        except (KeyError, ValueError):
+            return self._check_once(arm_q, finger_opening, holding_cube, allow_cube_rest)
+        for k in range(3):
+            t = self.obstacle_time + self.obstacle_swept_window * k / 2.0
+            self.data.mocap_pos[mid] = self.moving_obstacle_fn(t)
+            violations = self._check_once(arm_q, finger_opening, holding_cube, allow_cube_rest)
+            if violations:
+                return violations
+        return []
+
+    # ------------------------------------------------------------------ #
+    # public API
+    # ------------------------------------------------------------------ #
+    def check_state_at(self, arm_q, t: float, finger_opening: float = 0.04, holding_cube: bool = False) -> CollisionReport:
+        """Validate a configuration against the moving obstacle at time t."""
+        self.obstacle_time = float(t)
+        return self.check_state(arm_q, finger_opening, holding_cube)
+
+    def pin_obstacle_time(self, t: float) -> None:
+        """Pin the moving obstacle at time t for a subsequent planning run."""
+        self.obstacle_time = float(t)
 
     def check_state(
         self,
@@ -204,7 +190,9 @@ class CollisionChecker:
         if check_limits and not self.robot.within_limits(arm_q):
             return CollisionReport(False, 1, [("joint_limits", "joint_limits", 0.0)], 0)
         violations = self._check_single(arm_q, finger_opening, holding_cube, allow_cube_rest)
-        return CollisionReport(valid=not violations, n_samples=1, violations=violations, first_bad_sample=0 if violations else None)
+        return CollisionReport(
+            valid=not violations, n_samples=1, violations=violations, first_bad_sample=0 if violations else None
+        )
 
     def check_segment(
         self,
@@ -228,7 +216,7 @@ class CollisionChecker:
 
     def check_path(
         self,
-        path: list[np.ndarray] | np.ndarray,
+        path,
         finger_opening: float = 0.04,
         holding_cube: bool = False,
         max_step: float = MAX_SEGMENT_STEP_RAD,
@@ -251,3 +239,18 @@ class CollisionChecker:
             if not rep.valid:
                 return CollisionReport(False, total, rep.violations, i)
         return CollisionReport(True, total)
+
+    # ------------------------------------------------------------------ #
+    # helpers used by the grasp FSM / benchmarks
+    # ------------------------------------------------------------------ #
+    def cube_contact_pairs(self, arm_q: np.ndarray, finger_opening: float) -> set[frozenset[str]]:
+        """Body-name pairs currently contacting the shadow cube at ``arm_q``."""
+        violations = self._check_once(arm_q, finger_opening, False, False)
+        return {frozenset((a, b)) for a, b, _ in violations if "cube" in (a, b)}
+
+    def set_shadow_cube_pose(self, pos: np.ndarray, quat_wxyz: np.ndarray) -> None:
+        """Pin the shadow-data cube at a known world pose."""
+        if self._cube_qposadr is None:
+            return
+        self.data.qpos[self._cube_qposadr : self._cube_qposadr + 3] = pos
+        self.data.qpos[self._cube_qposadr + 3 : self._cube_qposadr + 7] = quat_wxyz

@@ -200,6 +200,37 @@ faster; on the blocked 7-D scene single-tree optimal search rarely finds a
 first solution within a 20 s budget - the classic feasibility/optimality
 trade-off against RRT-Connect, reported as measured, not tuned away.
 
+## 7c. Online replanning under a scripted moving obstacle (`control/monitor.py`)
+
+The system layer that turns the static pipeline into a closed loop:
+
+- **Scripted obstacle**: a mocap panel sweeps the workspace on a
+  deterministic sinusoid (pure function of sim time), so planning stays
+  reproducible.
+- **Unified swept-volume semantics**: with a moving obstacle set, every
+  collision check validates the obstacle's swept volume over
+  [t, t + window] (3 samples) - planners and the runtime guard share ONE
+  semantics, so a validated path cannot be instantly rejected by its own
+  guard (semantic mismatch was the source of early replan thrash).
+- **Guard**: each step validates the reference AND the physical arm (the
+  arm lags the reference; the panel swept into that gap in forensics runs)
+  against the obstacle over a 1.2 s horizon - long enough to detect,
+  decelerate and retreat before contact (0.6 s fired with the hand already
+  15 mm inside the panel).
+- **Park configuration**: an EE pose above/behind the sweep plane, IK-solved
+  and verified against the ENTIRE sweep cycle offline. On violation the arm
+  retreats to park via a GUARDED planned path (a straight servo can cut
+  through the panel; EE-Jacobian escapes were tried and are wrong - the
+  panel hits arbitrary links and pulling the EE back swings the elbow into
+  the sweep plane, measured 44 simultaneous contacts).
+- **Replan loop**: parked, the controller replans to the goal with the
+  obstacle pinned at NOW (the checker's swept window then covers exactly the
+  guard's horizon); failures wait out the sweep and retry.
+
+Measured (reports/BENCHMARKS.md §7): 100% zero-contact completion at both
+benchmark speeds with double-digit replan counts; the unguarded baseline
+executes the same initial plan into the panel.
+
 ## 8. Trajectory time parameterization (`trajectory/timing.py`)
 
 Method: **time-scaled cubic spline**.

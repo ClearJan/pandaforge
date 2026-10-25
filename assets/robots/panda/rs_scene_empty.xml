@@ -50,6 +50,9 @@
       <geom name="cube_geom" type="box" size="0.025 0.025 0.025" rgba="0.2 0.6 0.9 1" mass="0.1" friction="0.9 0.02 0.002" condim="4"/>
       <site name="cube_site" size="0.001"/>
     </body>
+    <body name="moving_obstacle" mocap="true" pos="0 0 -5">
+      <geom name="moving_obstacle_geom" type="box" size="0.02 0.12 0.12" rgba="0.9 0.55 0.15 0.9" friction="0.8 0.02 0.001"/>
+    </body>
     <body name="place_target" mocap="true" pos="0 0 -5">
       <geom name="place_marker" type="cylinder" size="0.03375 0.001" rgba="0.2 0.9 0.3 0.4" contype="0" conaffinity="0"/>
       <site name="place_site" size="0.002"/>

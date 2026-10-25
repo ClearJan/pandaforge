@@ -300,10 +300,19 @@ class MainWindow(QMainWindow):
         except Exception as exc:
             self.plan_panel.set_execution_state(f"execution refused: {exc}", "err")
             return
+        from robotstudio.control.monitor import GuardedExecutor
+
+        spec = self.engine.current_scene_spec()
+        if spec.moving_obstacle.enabled:
+            executor = GuardedExecutor(self.engine, traj)
+            self.plan_panel.set_execution_state(
+                f"guarded execution ({traj.duration:.2f} s, online replanning)…", "warn"
+            )
+        else:
+            self.plan_panel.set_execution_state(
+                f"executing trajectory ({traj.duration:.2f} s)…", "warn"
+            )
         self.engine.set_controller(executor)
-        self.plan_panel.set_execution_state(
-            f"executing trajectory ({traj.duration:.2f} s)…", "warn"
-        )
         self._active_executor = executor
 
     def _on_cancel(self) -> None:

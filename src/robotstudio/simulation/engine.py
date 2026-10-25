@@ -247,6 +247,7 @@ class SimulationEngine:
         self._fk_data = mujoco.MjData(self.model)
         self.robot = PandaRobot(self.model)
         self._cube_body_name_map = {"cube": self.model.body("cube").id}
+        self._moving_obs_mocapid = int(self.model.body("moving_obstacle").mocapid[0])
         self._apply_scene_to_model(spec)
         mujoco.mj_resetDataKeyframe(self.model, self.data, 0)  # home keyframe
         mujoco.mj_forward(self.model, self.data)
@@ -296,6 +297,13 @@ class SimulationEngine:
             d.qvel[cube_vadr : cube_vadr + 6] = 0
         else:
             d.qpos[cube_jadr : cube_jadr + 3] = [0, 0, _HIDDEN_Z]
+
+        # --- moving obstacle (mocap, scripted) ---
+        mo = spec.moving_obstacle
+        if mo.enabled:
+            d.mocap_pos[self._moving_obs_mocapid] = mo.pose_at(0.0)
+        else:
+            d.mocap_pos[self._moving_obs_mocapid] = [0, 0, _HIDDEN_Z]
 
         # --- place target (mocap) ---
         try:
@@ -370,6 +378,9 @@ class SimulationEngine:
         steps = min(steps, int(SimDefaults.MAX_REALTIME_FACTOR * (1.0 / SimDefaults.REALTIME_HZ) / m.opt.timestep))
         ctx = EngineContext(engine=self)
         with self._lock:
+            mo = self._scene_spec.moving_obstacle
+            if mo.enabled:
+                self.data.mocap_pos[self._moving_obs_mocapid] = mo.pose_at(self.data.time)
             for _ in range(steps):
                 if self._controller is not None:
                     targets = self._controller.update(ctx, m.opt.timestep)
@@ -622,6 +633,14 @@ class SimulationEngine:
     @property
     def last_error(self) -> str | None:
         return self._last_error
+
+    def moving_obstacle_pose(self, t: float | None = None) -> np.ndarray | None:
+        """Scripted pose of the moving obstacle at sim time t (or None)."""
+        mo = self._scene_spec.moving_obstacle
+        if not mo.enabled:
+            return None
+        t = self.data.time if t is None else t
+        return np.asarray(mo.pose_at(float(t)), dtype=float)
 
     def current_scene_spec(self) -> SceneSpec:
         with self._lock:

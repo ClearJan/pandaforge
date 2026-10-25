@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.3.0 — 2026-10-25
+
+### Closed-loop system
+- Scripted moving obstacle (mocap panel) + GuardedExecutor: swept-volume
+  collision semantics shared by planner and runtime guard, dual
+  reference/physical-arm guarding with a 1.2 s horizon, cycle-verified park
+  configuration with guarded retreats, and an online replan loop.
+- ``moving_wall`` scene preset; UI auto-wraps guarded execution;
+  ``python -m robotstudio.demo --moving`` headless proof.
+- Replan benchmark vs an unguarded baseline (2 speeds x 5 trials).
+
+### Hardening
+- CollisionChecker rewritten clean (mode semantics + carried-cube transform
+  + swept moving obstacle in one file).
+
 ## 1.2.0 — 2026-10-25
 
 ### Algorithms

@@ -88,6 +88,11 @@ load robot -> configure scene -> set target -> solve IK -> collision check
   aborts. Success is judged by **physical evidence** (fingertip-cube
   contacts, the cube actually rising with the gripper, final resting
   position) — no teleporting, no scripted animation.
+- **Online replanning under a moving obstacle**: a panel sweeps the
+  workspace on a known script; execution is guarded by swept-volume checks
+  (reference AND physical arm, 1.2 s horizon) and replans through a
+  cycle-verified park configuration when the corridor closes
+  (``moving_wall`` preset).
 - **One-click Showcase** toolbar button: obstacle-scene sweep + full pick &
   place for demos and screen recording.
 
@@ -138,6 +143,7 @@ All numbers from real runs (raw data in
 | Planning (3 scenes × 28-30 seeds × 3 planners) | RRT-Connect 100% everywhere (median 0.19–0.23 s); **0 of the 178 produced paths failed independent re-validation (261 trials)** |
 | Optimal planning (RRT\* / Informed RRT\*) | raw path costs ≤ RRT's (-21…-26% where solvable); convergence histories committed |
 | Pick & place (physical trials) | base 20/20, jittered 10/10, table-edge 5/5, roof side-grasp 5/5; 3/3 impossible targets correctly rejected |
+| Online replanning (moving panel) | guarded: 100% zero-contact completion, median double-digit replans; unguarded baseline gets hit (see §7) |
 | Collision check cost | 0.052 ms per state |
 
 ![Planning success rates](reports/benchmarks/charts/planning_success_rate.png)

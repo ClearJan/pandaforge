@@ -1,0 +1,30 @@
+{
+  "slow/guarded": {
+    "n": 5,
+    "zero_contact_rate": 1.0,
+    "reached_rate": 1.0,
+    "median_contacts": 0.0,
+    "median_replans": 102.0
+  },
+  "slow/static": {
+    "n": 5,
+    "zero_contact_rate": 0.2,
+    "reached_rate": 1.0,
+    "median_contacts": 1.0,
+    "median_replans": 0.0
+  },
+  "fast/guarded": {
+    "n": 5,
+    "zero_contact_rate": 0.0,
+    "reached_rate": 1.0,
+    "median_contacts": 8.0,
+    "median_replans": 90.0
+  },
+  "fast/static": {
+    "n": 5,
+    "zero_contact_rate": 0.0,
+    "reached_rate": 0.0,
+    "median_contacts": 12.0,
+    "median_replans": 0.0
+  }
+}

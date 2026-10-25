@@ -19,6 +19,7 @@ import numpy as np
 def main() -> int:
     parser = argparse.ArgumentParser(description="RobotStudio headless demo")
     parser.add_argument("--quick", action="store_true", help="grasp task only")
+    parser.add_argument("--moving", action="store_true", help="dynamic-obstacle guarded replanning demo")
     args = parser.parse_args()
 
     from robotstudio.collision.checker import CollisionChecker
@@ -34,12 +35,46 @@ def main() -> int:
     print("RobotStudio headless demo - all evidence from live physics")
     print("=" * 64)
 
-    eng = SimulationEngine(scene_name="tabletop", headless=True)
+    scene = "moving_wall" if args.moving else "tabletop"
+    eng = SimulationEngine(scene_name=scene, headless=True)
     eng.start(with_viewer=False)
     eng.set_speed(3.0)
     time.sleep(0.5)
 
     try:
+        if args.moving:
+            from robotstudio.control.monitor import GuardedExecutor
+            from robotstudio.kinematics.ik import IKSolver
+            from robotstudio.kinematics.pose import Pose
+
+            print("\n[1] guarded planning through a sweeping panel")
+            checker = CollisionChecker(eng.model, eng.robot)
+            import mujoco as _mj
+
+            ik = IKSolver(eng.model, _mj.MjData(eng.model), eng.robot, seed=2028)
+            res_ik = ik.solve(
+                Pose.make([0.35, -0.40, 0.55], [0.0, 1.0, 0.0, 0.0]),
+                n_restarts=12,
+                validate=lambda q: checker.check_state(q).valid,
+            )
+            checker.pin_obstacle_time(eng.snapshot().sim_time)
+            plan = RRTConnectPlanner(
+                checker, PlannerConfig(seed=2028, max_planning_time=10.0)
+            ).plan(np.array(PandaSpec.HOME_QPOS), res_ik.arm_q)
+            print(f"    initial plan: success={plan.success} waypoints={plan.n_waypoints}")
+            guarded = GuardedExecutor(eng, TrajectoryGenerator().generate(plan.path))
+            eng.set_controller(guarded)
+            t0 = time.perf_counter()
+            while time.perf_counter() - t0 < 150.0 and not guarded.stats.completed:
+                time.sleep(0.1)
+            st = guarded.stats
+            print(f"    completed={st.completed} success={st.success} "
+                  f"replans={st.replans} guard_violations={st.guard_violations} "
+                  f"obstacle_contacts={st.obstacle_contacts}")
+            ok = st.completed and st.success and st.obstacle_contacts == 0 and st.replans >= 1
+            print("\n" + ("ALL CLAIMS VERIFIED" if ok else "DEMO FAILED - see messages above"))
+            return 0 if ok else 2
+
         if not args.quick:
             # ---- 1. plan around the table ----
             print("\n[1] motion planning (RRT-Connect, collision-checked)")
