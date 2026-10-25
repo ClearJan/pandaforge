@@ -59,7 +59,7 @@ or report path). This file is updated as work progresses, never pre-filled.
 
 | Task | Owner | Status | Evidence |
 |---|---|---|---|
-| Full pytest suite green (51/51) + ruff clean | QA | DONE | `reports/TEST_REPORT.md`, `reports/FINAL_AUDIT.md` |
+| Full pytest suite green (75/75 + 1 documented skip) + ruff clean | QA | DONE | `reports/TEST_REPORT.md` |
 | Performance profile before/after optimizations, same seeds | QA | DONE | `reports/BENCHMARKS.md` §5 (NN vectorization 3.2x, sampling fix 75s->0.6s) |
 
 ## Phase 7 — Release
@@ -82,3 +82,18 @@ or report path). This file is updated as work progresses, never pre-filled.
   re-define it (duplicate key name compile error). Scene generator omits it.
 - 2026-10-25: single_obs wall originally intersected the arm at home pose
   (ncon=12); moved to y=-0.24 side approach blocker.
+
+## Post-audit iterations (v1.2.0 / v1.3.0)
+
+| Task | Owner | Status | Evidence |
+|---|---|---|---|
+| RRT* + Informed RRT* (k-NN rewiring, ellipsoid sampling) | Planning | DONE | `tests/unit/test_rrt_star.py`, `reports/benchmarks/rrt_star_*.csv` (-21..-26% raw cost vs RRT) |
+| Antipodal grasp candidates + side-grasp fallback | Manipulation | DONE | `tests/physics/test_grasp_fsm.py` (roof scene), grasp benchmark `roof_side` 5/5 |
+| 3D path/trace/contact visualization | Simulation | DONE | `engine._update_decorations`, viewer tests |
+| Toolbar + one-click Showcase | UI | DONE | `tests/gui/test_showcase.py` (4 tests) |
+| TOPP-RA time-optimal parameterization | Trajectory | DONE | `tests/unit/test_toppra.py`, `toppra_summary.json` (-58% median long paths) |
+| Union scene layout + true in-place switching | Simulation | DONE | scene-switch regression in GUI tests; `docs/DECISIONS.md` D11 |
+| Shadow-cube sync + semantic contact modes | Manipulation | DONE | `docs/DECISIONS.md` D12; jitter trials restored to 100% |
+| Headless proof demo (`python -m robotstudio.demo`) | Release | DONE | session log "ALL CLAIMS VERIFIED" |
+| PandaForge branding + CI windows+ubuntu | Release | DONE | `pyproject.toml`, `.github/workflows/ci.yml` |
+| Moving-obstacle online replanning | Control | DONE | `tests/integration/test_replan.py`, `replan_summary.json` (100% vs 20% zero-contact) |

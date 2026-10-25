@@ -111,3 +111,64 @@ Append-only. Each entry: context, decision, reason, consequences.
   not "valid reachable poses".
 - Consequences: 100% success on the valid population; the sampling rule is
   documented in the benchmark script.
+
+## D11 - Union scene layout (position-only hiding)
+
+- Date: 2026-10-25
+- Context: engine construction on 'empty' crashed (missing cube body) and
+  preset switching was silently half-applied. Root cause: MuJoCo bakes
+  contype=0 geoms out of the collision pipeline at COMPILE time - runtime
+  flag flips cannot re-enable them (verified experimentally).
+- Decision: every scene XML contains every body (table, all preset
+  obstacles, cube, place marker, moving obstacle); disabled bodies are
+  parked far below the floor by POSITION only, collisions always enabled.
+- Consequences: true in-place preset switching, one model per session, no
+  viewer reloads; ResetCmd re-applies the current spec after the keyframe
+  reset (the keyframe restores the LOADED XML's world, which may be another
+  preset).
+
+## D12 - Shadow-cube live sync + semantic contact modes
+
+- Date: 2026-10-25
+- Context: position-jittered grasp trials dropped to 50% - the shadow
+  checker was judging contacts against a cube at its XML spawn pose, not
+  the live one; and the enumerated rest-pair whitelist could not handle
+  arbitrary supports (pedestals).
+- Decision: the FSM syncs the shadow cube to the live pose every tick
+  (unless carrying); contact semantics became mode rules instead of pair
+  lists (free mode: cube-vs-environment is physics, allowed; holding mode:
+  forbidden unless breaking away; grasp pairs only while holding).
+- Consequences: correct validation for any support geometry; the
+  roof side-grasp scene became feasible at all.
+
+## D13 - TOPP-RA geometry/time-law split + dominance guarantee
+
+- Date: 2026-10-25
+- Context: TOPP on raw waypoint polylines compared different GEOMETRY than
+  the executed spline (unfair, sometimes 5x slower); refit overshoots broke
+  the numeric check (a_ratio 74).
+- Decision: geometry = the legacy clamped spline, sampled by ARC LENGTH
+  (uniform-time sampling decouples parameter from geometry); TOPP-RA
+  re-times that exact geometry; an explicit dominance guarantee returns
+  the faster of TOPP/legacy, so the result is never slower by construction.
+- Consequences: honest -58% on long paths; 0% rows in the benchmark are
+  the guarantee working where the conservative allocation is already
+  near-optimal.
+
+## D14 - Guarded replanning: one semantics, two states, verified park
+
+- Date: 2026-10-25
+- Context: five failed designs (single-time guards missing transiting
+  panels; plan/guard semantic mismatch thrash; EE escapes swinging the
+  elbow into the sweep plane - 44 simultaneous contacts; waiting inside
+  the band; unguarded retreats getting grazed).
+- Decision: swept-volume semantics live IN the checker (planner and guard
+  share one definition); the guard checks the reference AND the physical
+  arm over a 1.2 s horizon; violations retreat to a park configuration
+  verified against the ENTIRE sweep cycle, via planned+guarded paths;
+  replans pin the obstacle at NOW so the checker's swept window equals the
+  guard's horizon.
+- Consequences: 100% zero-contact completion at design speed; at the
+  envelope edge the guard degrades to fewer, grazing contacts with 100%
+  goal reach (vs 0% unguarded) - the operating envelope is measured and
+  documented, not hidden.

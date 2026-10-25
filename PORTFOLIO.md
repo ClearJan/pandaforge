@@ -23,6 +23,9 @@ source. Every number links to committed raw data.
 | Trajectory generation | `src/robotstudio/trajectory/timing.py` | time-scaled cubic splines; trapezoidal lower bounds; NUMERIC verification of velocity/acceleration limits with guaranteed-convergence rescaling |
 | Execution control | `src/robotstudio/control/executor.py` | servo streaming at 500 Hz; settle-based completion (time-finishing is not enough — this was a real bug the trials caught) |
 | Pick & place FSM | `src/robotstudio/manipulation/fsm.py` | 15 states with timeouts/retry/abort; success = fingertip contacts + the cube actually rising + resting position, all measured in the live contact/pose data |
+| Antipodal grasp generation | `src/robotstudio/manipulation/grasp.py` | top + 4 side candidates, declarative collision-free selection; roof-blocked scenes automatically fall back to side grasps (shelf-to-shelf, 5/5) |
+| TOPP-RA | `src/robotstudio/trajectory/toppra.py` | reachability-analysis time-optimal parameterization with an explicit dominance guarantee; -58% median duration on long paths |
+| Online replanning | `src/robotstudio/control/monitor.py` | closed loop under a scripted moving obstacle: swept-volume semantics shared by planner and guard, cycle-verified park, guarded retreats |
 | Simulation engine | `src/robotstudio/simulation/engine.py` | single-owner threading model with command queue; in-place scene switching (viewer never reloads); headless mode for tests |
 
 ## Hard problems I actually solved (with the receipts)
@@ -48,6 +51,14 @@ source. Every number links to committed raw data.
    self-colliding configurations. Filtering the population (documented,
    not hidden) moved it to 100% and made the metric meaningful.
    (`docs/DECISIONS.md` D10)
+5. **Static validation in a time-varying world.** The guarded replanning
+   loop went through five wrong designs before converging (single-time
+   guards that missed transiting panels; EE-based escapes that swung the
+   elbow INTO the sweep plane - 44 simultaneous contacts; waiting inside
+   the band; unguarded retreats). The final architecture unifies swept
+   volume semantics between planner and guard, guards the reference AND
+   the physical arm, and retreats to a cycle-verified park. Every wrong
+   turn is documented in `docs/ALGORITHMS.md` SS7c.
 
 ## Measured results (all reproducible)
 
@@ -56,9 +67,14 @@ source. Every number links to committed raw data.
 - Planning: RRT-Connect 100% on all 3 benchmark scenes (median 0.19–0.23 s);
   single-tree RRT 45–47% under an 8 s budget on blocked scenes — reported,
   not tuned away; 0 of 261 successful paths failed independent re-validation.
-- Pick & place: 35/35 correct verdicts (20 base + 10 jittered + 5 table-edge
-  successes; 3 impossible targets correctly rejected), median 2.87 s per
-  task at 3x realtime.
+- Optimal planning: RRT*/Informed RRT* raw path costs 21-26% below RRT's;
+  convergence histories committed.
+- TOPP-RA: -58% median execution time on long paths (never slower by
+  construction - dominance guarantee).
+- Pick & place: 40/40 correct verdicts (20 base + 10 jittered + 5 table-edge
+  + 5 roof side-grasp successes; 3 impossible targets correctly rejected).
+- Online replanning: 100% zero-contact completion at design speed vs 20%
+  for the unguarded baseline; at the envelope edge 100% vs 0% goal reach.
 
 ## Where to look in 5 minutes
 
@@ -86,6 +102,12 @@ source. Every number links to committed raw data.
   (`ARCHITECTURE.md`, AGENTS.md rule 1).
 - *RRT vs RRT-Connect — measured difference?* → reports/BENCHMARKS.md §2
   (100% vs 45-47% under the same budget; 20x median time).
+- *Why can TOPP-RA claim never-slower?* -> the legacy allocation is a
+  feasible time law for the same spline geometry; the code returns the
+  faster of the two (toppra.py, DOMINANCE GUARANTEE).
+- *How does replanning avoid being hit mid-retreat?* -> docs/ALGORITHMS.md
+  SS7c: shared swept-volume semantics, dual reference/physical guarding,
+  cycle-verified park.
 
 ## Resume bullet (draft, honest)
 
@@ -95,9 +117,12 @@ source. Every number links to committed raw data.
 > reachable targets, ≤ 5 mm), RRT/RRT-Connect with independent path
 > re-validation (100% success across 3 scenes, 0 unsafe outputs in 261
 > trials), numerical trajectory time-parameterization, and a physically
-> verified pick-and-place state machine (35/35 correct verdicts incl.
-> out-of-reach rejection); packaged with reproducible benchmarks, 51-test
-> CI suite and a self-testing PyInstaller distribution.
+> verified pick-and-place state machine (40/40 correct verdicts incl.
+> out-of-reach rejection) plus closed-loop replanning under a moving
+> obstacle (100% zero-contact vs 20% unguarded); RRT*/Informed-RRT*
+> optimal planning and TOPP-RA time-optimal trajectories (-58% on long
+> paths, dominance-guaranteed); packaged with reproducible benchmarks, a
+> 75-test CI suite and a self-testing PyInstaller distribution.
 
 ## Honest status
 

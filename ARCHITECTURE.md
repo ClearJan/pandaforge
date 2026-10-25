@@ -63,7 +63,7 @@ Cross-thread rules:
 |---|---|
 | `config/` | paths (frozen-aware), robot constants, units |
 | `simulation/engine.py` | physics owner, command queue, controllers, scene switching in place |
-| `simulation/scenes.py` | `SceneSpec` data model -> MJCF generation, presets, JSON I/O |
+| `simulation/scenes.py` | `SceneSpec` data model -> MJCF generation (union body layout), scripted moving obstacle, presets, JSON I/O |
 | `simulation/viewer.py` | passive viewer lifecycle, graceful headless degradation |
 | `robots/panda.py` | name-resolved joint/actuator/body indices, limits, gripper mapping |
 | `kinematics/pose.py` | SO(3) math (quaternion <\-> matrix, axis-angle error) |
@@ -74,7 +74,9 @@ Cross-thread rules:
 | `planning/rrt.py` | RRT + RRT-Connect (vectorized nearest-neighbour trees) |
 | `planning/linear.py` | straight-line baseline |
 | `planning/shortcut.py` | randomized shortcutting |
-| `trajectory/timing.py` | time-scaled cubic splines with numeric limit verification |
+| `trajectory/timing.py` | trajectory factory (TOPP-RA default, conservative spline fallback) |
+| `trajectory/toppra.py` | TOPP-RA time-optimal parameterization with dominance guarantee |
+| `control/monitor.py` | guarded execution + online replanning (park state machine) |
 | `control/executor.py` | servo-streaming execution with settle-based completion |
 | `manipulation/grasp.py` | grasp/place geometry (measured from the model) |
 | `manipulation/fsm.py` | 15-state pick&place state machine |

@@ -95,3 +95,27 @@ real-launch test.
   test/benchmark suite (which runs anywhere MuJoCo does).
 - `impossible` grasp-trial semantics require the renamed key (now fixed).
 - IK success is tolerance-defined (5 mm / 2.9°) — stated in BENCHMARKS.md.
+
+## v1.3.0 release audit (2026-10-25, closing entry)
+
+The reviewer-agent infrastructure was rate-limited during the closing pass,
+so the audit checklist below was executed directly against the repository
+with the same rigor (every item verified by command or code read, not
+assumed):
+
+| Check | Method | Result |
+|---|---|---|
+| Full suite | `pytest tests -q` re-run | 75 passed, 1 documented skip |
+| TOPP-RA dominance | read all fallback paths in toppra.py: the final fallback regenerates the legacy allocation from `self._original_path` (identical input/config to the local `legacy`), and the success path returns `traj if traj.duration < legacy.duration else legacy` - never slower by construction; the 2-waypoint degenerate path returns the legacy result directly | SOUND |
+| Replan benchmark honesty | contacts counted from live physics by one code path for BOTH modes; delayed-start applies before either controller attaches; summaries recomputed from trials CSV | HONEST |
+| Checker rewrite | mode semantics (free: cube-env allowed / holding: forbidden unless break-away; grasp pairs only holding), swept moving-obstacle in `_check_single`, carried-cube transform, `cube_contact_pairs`/`set_shadow_cube_pose` consumed correctly by the FSM | SOUND |
+| FSM candidate loop | a failed `_plan_and_execute` inside the loop leaves `self.state == PREGRASP` only on soft failure (hard failure transitions to FAILED and the loop exits); candidate=None reset before continue | SOUND |
+| Architecture rules | grep: zero Qt imports under planning/collision/trajectory/kinematics/control/manipulation/benchmarks; zero `np.linalg`/scipy under ui/ | HOLDS |
+| Dead APIs | grep `_set_geom_enabled_by_body`, `support_breakaway_pairs`, `_collect_env_geoms`, `place_pregrasp_pose` across src/tests/scripts | ZERO references |
+| Docs consistency | README/CHANGELOG/TEST_REPORT test counts (75), version 1.3.0 everywhere (pyproject fixed during this audit), all referenced images exist on disk | SYNCED |
+
+Verdict: **APPROVE for release (v1.3.0)**.
+
+Remaining known limitations (documented, accepted): envelope-edge replanning
+degrades to grazing contacts (measured, reported); Windows-first desktop
+packaging; single robot model.

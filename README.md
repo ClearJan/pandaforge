@@ -84,6 +84,11 @@ load robot -> configure scene -> set target -> solve IK -> collision check
   first collision-free one is used — when a roof blocks the top approach
   (`roof_grasp` preset) the robot automatically performs a horizontal side
   grasp, shelf-to-shelf.
+
+  ![Side grasp under a roof](docs/img/scene_side_grasp.png)
+
+  *Roof blocks the top-down approach → the planner automatically selects a
+  horizontal side grasp (real simulation frame).*
 - **Automatic pick & place**: a 15-state FSM with timeouts, retries and
   aborts. Success is judged by **physical evidence** (fingertip-cube
   contacts, the cube actually rising with the gripper, final resting

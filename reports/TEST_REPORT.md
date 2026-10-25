@@ -2,7 +2,7 @@
 
 Test suite: `pytest tests` on 2026-10-25, Windows 11, Python 3.11.9,
 pytest 9.1.1 + pytest-timeout. QT runs with the offscreen platform except
-the viewer tests, which open a REAL MuJoCo window (skipped on display-less CI). Result: **73 passed, 0 failed, 0 skipped** (incl. real-viewer and showcase runs).
+the viewer tests, which open a REAL MuJoCo window (skipped on display-less CI). Result: **75 passed, 0 failed, 1 documented skip** (incl. real-viewer and showcase runs).
 
 Legend: PASS / FAIL / SKIP / BLOCKED / NOT RUN — nothing below is
 pre-filled; every PASS row corresponds to a real executed test.
@@ -76,6 +76,14 @@ graceful headless fallback masked it as a warning. Fixed in
 Two engine protocol defects found by these tests and fixed: ApplySceneCmd
 and E-stop silently detached controllers (now: controllers may opt into
 surviving scene switches; e-stop notified via callback).
+
+## Replanning tests (`tests/integration/test_replan.py`) - 2 passed, 1 documented skip
+
+| Test | What it proves | Result |
+|---|---|---|
+| test_guarded_execution_replans_and_completes | sweeping panel closes the corridor mid-task; guarded execution completes with >=1 replan, ZERO arm-obstacle contacts, goal reached | PASS |
+| test_guard_detects_imminent_collision | time-pinned checks flag configurations the obstacle is about to occupy | PASS |
+| test_static_plan_baseline_gets_hit_or_fails | (documented skip: the baseline contrast is measured in the replan benchmark rather than duplicating a collision in CI) | SKIP (documented) |
 
 ## Interactive verification (manual, NOT covered by offscreen tests)
 
