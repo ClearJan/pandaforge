@@ -2,10 +2,10 @@
 
 > Python package name: `robotstudio` (import name kept for compatibility).
 
-[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+[![Tests](https://img.shields.io/badge/tests-75%20passed-brightgreen.svg)](reports/TEST_REPORT.md)
 [![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-75%20passed-brightgreen.svg)](reports/TEST_REPORT.md)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux-lightgrey.svg)
 
 PandaForge is a desktop application for **interactive robot motion planning,
 simulation and physical manipulation** built on MuJoCo and the Franka Emika

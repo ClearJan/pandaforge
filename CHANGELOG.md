@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1 — 2026-10-25
+
+### Documentation integrity
+- Fixed six chart links in reports/BENCHMARKS.md (wrong relative path -
+  none of the benchmark charts were rendering from the report page).
+- README badges normalized to fork-safe static shields.
+
 ## 1.4.0 — 2026-10-25
 
 ### Open-source readiness

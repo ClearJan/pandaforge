@@ -39,7 +39,7 @@ the base) that must be reported as failures.
 | collision-invalid solutions accepted | 0 |
 | false successes on unreachable targets | **0** (20/20 correctly rejected) |
 
-![IK time histogram](charts/ik_times.png)
+![IK time histogram](benchmarks/charts/ik_times.png)
 
 ## 2. Motion planning (3 scenarios x 28-30 seeds x 3 planners)
 
@@ -69,8 +69,8 @@ re-validated by an INDEPENDENT checker instance (dense re-check).
   single-tree planner in 7-D; RRT-Connect's bidirectional CONNECT step is
   the difference (see docs/ALGORITHMS.md §7). No failures were discarded.
 
-![Success rates](charts/planning_success_rate.png)
-![Planning time distributions](charts/planning_times.png)
+![Success rates](benchmarks/charts/planning_success_rate.png)
+![Planning time distributions](benchmarks/charts/planning_times.png)
 
 Shortcutting: on the single_obs/narrow scenes the randomized shortcut pass
 reduces joint-space path length by ~20-55% depending on seed (column
@@ -92,7 +92,7 @@ the table, moved > 150 mm, gripper open). `impossible` trials expect failure
 | hard_place (table-edge targets) | 5 | **100%** | 2.87 s |
 | impossible (out of reach) | 3 | 3/3 correctly FAILED | 1.76 s |
 
-![Grasp success](charts/grasp_success.png)
+![Grasp success](benchmarks/charts/grasp_success.png)
 
 Failure analysis history (all fixed, kept for the record):
 
@@ -141,8 +141,8 @@ Reading (honest):
   the final medians here (open scenes, moderate dimensionality): see the
   convergence chart.
 
-![RRT* cost convergence](charts/rrt_star_convergence.png)
-![RRT* path quality](charts/rrt_star_quality.png)
+![RRT* cost convergence](benchmarks/charts/rrt_star_convergence.png)
+![RRT* path quality](benchmarks/charts/rrt_star_quality.png)
 
 ## 5. TOPP-RA time-optimal parameterization
 
