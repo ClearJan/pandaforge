@@ -182,6 +182,7 @@ All numbers from real runs (raw data in
 - [docs/DECISIONS.md](docs/DECISIONS.md) — every technical decision and its evidence
 - [reports/TEST_REPORT.md](reports/TEST_REPORT.md) — full test results
 - [reports/BENCHMARKS.md](reports/BENCHMARKS.md) — protocols, raw data, failure analysis
+- [docs/REPRODUCIBILITY.md](docs/REPRODUCIBILITY.md) — re-run every benchmark yourself
 - [PORTFOLIO.md](PORTFOLIO.md) — interview-oriented summary
 
 ## 5-minute code tour

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.0 — 2026-10-25
+
+### Project quality signals
+- docs/REPRODUCIBILITY.md: an index mapping every benchmark number to its
+  re-run command and raw data file, plus the determinism contract (what is
+  seed-exact vs wall-clock variable).
+- .gitattributes: deterministic line endings across platforms, binary
+  markers for meshes/images.
+
 ## 1.4.1 — 2026-10-25
 
 ### Documentation integrity
