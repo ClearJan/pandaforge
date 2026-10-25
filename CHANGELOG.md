@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.1 — 2026-10-25
+
+### Repository hygiene (open-source readiness)
+- Removed unused vendored menagerie variants (MJX models, standalone
+  hand.xml, demo scene.xml, preview image) and a leftover parameter-probe
+  scene file; vendored subset documented in THIRD_PARTY_NOTICES.md.
+- Module-level debug-import tidy-up in toppra.py.
+
 ## 1.3.0 — 2026-10-25
 
 ### Closed-loop system

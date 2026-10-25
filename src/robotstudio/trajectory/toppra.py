@@ -36,6 +36,8 @@ zero start/end velocity.
 
 from __future__ import annotations
 
+import os
+
 import numpy as np
 from scipy.interpolate import CubicSpline
 
@@ -190,8 +192,6 @@ class ToppRaGenerator:
             times[i + 1] = times[i] + (2 * ds / max(root, 1e-12))
         if not np.all(np.isfinite(times)) or times[-1] <= 0:
             raise TrajectoryGenerationError("TOPP-RA produced a degenerate time law")
-        import os
-
         if os.environ.get("PANDAFORGE_TOPP_DEBUG"):
             print(f"[topp] n={n} alloc_duration={times[-1]:.3f} x: min={x.min():.4f} "
                   f"max={x.max():.4f} zeros={int((x < 1e-9).sum())} qp_norm min={qp_norm.min():.5f}")
@@ -239,8 +239,6 @@ class ToppRaGenerator:
             _spline=CubicSpline(st, sq, bc_type="clamped", axis=0),
         )
         v_ratio, a_ratio = traj.constraint_violation()
-        import os
-
         if os.environ.get("PANDAFORGE_TOPP_DEBUG") and (v_ratio > 1 or a_ratio > 1):
             ts = np.arange(0.0, st[-1], 0.002)
             acc = traj._spline(ts, 2)
