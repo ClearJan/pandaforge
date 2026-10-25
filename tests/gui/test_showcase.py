@@ -65,6 +65,10 @@ def test_path_visual_and_decorations(tabletop):
 
 def test_decorations_drawn_in_real_viewer(tabletop):
     """With a REAL viewer window, user_scn receives path/trace geoms."""
+    import os
+
+    if os.environ.get("PANDAFORGE_REAL_VIEWER") != "1":
+        pytest.skip("real-viewer test is opt-in (PANDAFORGE_REAL_VIEWER=1)")
     import mujoco
 
     model, data, robot = tabletop

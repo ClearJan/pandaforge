@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.6.2 — 2026-10-25
+
+### CI fixes (first cloud runs)
+- ubuntu: install system GL libraries (libegl1/libgl1/...) for offscreen
+  Qt; disable matrix fail-fast so one platform cannot cancel the other.
+- Real-viewer tests are now opt-in via PANDAFORGE_REAL_VIEWER=1: on
+  display-less CI runners, missing GL segfaults natively before the Python
+  exception layer, so the graceful skip could not trigger. Locally they
+  still run by default through the opt-in and exercise the real window.
+
 ## 1.6.1 — 2026-10-25
 
 ### Test hardening

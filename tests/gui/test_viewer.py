@@ -31,9 +31,15 @@ def test_viewer_module_imports_cleanly():
 def test_real_viewer_launch_and_close(tabletop):
     """Launch the ACTUAL passive viewer window and close it.
 
-    Skipped (not failed) on machines without an interactive display/GL;
-    a genuine API-level failure still fails the test.
+    Opt-in via PANDAFORGE_REAL_VIEWER=1: on CI runners without an
+    interactive desktop, missing GL crashes the process NATIVELY (segfault
+    before the Python exception layer), which a try/except cannot convert
+    to a skip. Run locally to exercise the real path.
     """
+    import os
+
+    if os.environ.get("PANDAFORGE_REAL_VIEWER") != "1":
+        pytest.skip("real-viewer test is opt-in (PANDAFORGE_REAL_VIEWER=1)")
     import mujoco
 
     model, data, _robot = tabletop
