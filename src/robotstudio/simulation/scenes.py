@@ -123,13 +123,19 @@ class SceneSpec:
 
     @staticmethod
     def from_dict(d: dict) -> SceneSpec:
-        table = TableSpec(**d.get("table", {}))
+        def _tup(v):
+            """JSON arrays -> tuples so reloaded specs compare equal to the
+            originals (dataclass __eq__ distinguishes tuple from list)."""
+            if isinstance(v, (list, tuple)):
+                return tuple(_tup(x) for x in v)
+            return v
+
+        table = TableSpec(**{k: _tup(v) for k, v in d.get("table", {}).items()})
         obstacles = []
         for o in d.get("obstacles", []):
             kind = o.get("kind", "box")
             cls = {"box": BoxObstacle, "sphere": SphereObstacle, "cylinder": CylinderObstacle}[kind]
-            o = dict(o)
-            o.pop("kind", None)
+            o = {k: _tup(v) for k, v in o.items() if k != "kind"}
             obstacles.append(cls(**o))
         return SceneSpec(
             name=d.get("name", "scene"),
@@ -138,12 +144,14 @@ class SceneSpec:
             obstacles=obstacles,
             cube_enabled=d.get("cube_enabled", True),
             cube_size=d.get("cube_size", 0.025),
-            cube_pos=d.get("cube_pos", (0.55, 0.0, 0.425)),
-            cube_rgba=d.get("cube_rgba", (0.2, 0.6, 0.9, 1.0)),
+            cube_pos=_tup(d.get("cube_pos", (0.55, 0.0, 0.425))),
+            cube_rgba=_tup(d.get("cube_rgba", (0.2, 0.6, 0.9, 1.0))),
             place_enabled=d.get("place_enabled", True),
-            place_pos=d.get("place_pos", (0.55, -0.3, 0.425)),
-            moving_obstacle=MovingObstacleSpec(**d.get("moving_obstacle", {})),
-            max_cube_pos=d.get("max_cube_pos"),
+            place_pos=_tup(d.get("place_pos", (0.55, -0.3, 0.425))),
+            moving_obstacle=MovingObstacleSpec(
+                **{k: _tup(v) for k, v in d.get("moving_obstacle", {}).items()}
+            ),
+            max_cube_pos=_tup(d["max_cube_pos"]) if d.get("max_cube_pos") is not None else None,
         )
 
 

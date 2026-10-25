@@ -24,6 +24,9 @@
       <geom name="table_leg_1_-1" type="box" size="0.02 0.02 0.185" pos="0.2975 -0.3825 0" rgba="0.3 0.3 0.3 1"/>
       <geom name="table_leg_1_1" type="box" size="0.02 0.02 0.185" pos="0.2975 0.3825 0" rgba="0.3 0.3 0.3 1"/>
     </body>
+    <body name="wall_obstacle" pos="0 0 -5" quat="1 0 0 0">
+      <geom name="wall_obstacle_geom" type="box" size="0.2 0.03 0.2" rgba="0.85 0.35 0.2 0.7" friction="0.8 0.02 0.001"/>
+    </body>
     <body name="shelf_left" pos="0.45 -0.18 0.65" quat="1 0 0 0">
       <geom name="shelf_left_geom" type="box" size="0.15 0.02 0.25" rgba="0.5 0.5 0.55 0.8" friction="0.8 0.02 0.001"/>
     </body>
@@ -33,10 +36,22 @@
     <body name="post_front" pos="0.32 0 0.2" quat="1 0 0 0">
       <geom name="post_front_geom" type="box" size="0.02 0.02 0.3" rgba="0.5 0.5 0.55 0.8" friction="0.8 0.02 0.001"/>
     </body>
+    <body name="roof_obstacle" pos="0 0 -5" quat="1 0 0 0">
+      <geom name="roof_obstacle_geom" type="box" size="0.085 0.085 0.012" rgba="0.85 0.35 0.2 0.75" friction="0.8 0.02 0.001"/>
+    </body>
+    <body name="pedestal" pos="0 0 -5" quat="1 0 0 0">
+      <geom name="pedestal_geom" type="box" size="0.06 0.06 0.05" rgba="0.5 0.5 0.55 1" friction="0.8 0.02 0.001"/>
+    </body>
+    <body name="place_pedestal" pos="0 0 -5" quat="1 0 0 0">
+      <geom name="place_pedestal_geom" type="box" size="0.06 0.06 0.05" rgba="0.5 0.5 0.55 1" friction="0.8 0.02 0.001"/>
+    </body>
     <body name="cube" pos="0.55 0 0.425">
       <freejoint name="cube_joint"/>
       <geom name="cube_geom" type="box" size="0.025 0.025 0.025" rgba="0.2 0.6 0.9 1" mass="0.1" friction="0.9 0.02 0.002" condim="4"/>
       <site name="cube_site" size="0.001"/>
+    </body>
+    <body name="moving_obstacle" mocap="true" pos="0 0 -5">
+      <geom name="moving_obstacle_geom" type="box" size="0.02 0.12 0.12" rgba="0.9 0.55 0.15 0.9" friction="0.8 0.02 0.001"/>
     </body>
     <body name="place_target" mocap="true" pos="0.55 -0.3 0.425">
       <geom name="place_marker" type="cylinder" size="0.03375 0.001" rgba="0.2 0.9 0.3 0.4" contype="0" conaffinity="0"/>

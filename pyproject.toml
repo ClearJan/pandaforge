@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robotstudio"
-version = "1.5.2"
+version = "1.6.0"
 description = "PandaForge (package: robotstudio) - Interactive Robot Motion Planning & Manipulation Studio (Franka Panda + MuJoCo)"
 readme = "README.md"
 requires-python = ">=3.11"

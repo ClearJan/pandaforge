@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.6.0 — 2026-10-25
+
+### Fixed
+- Scene JSON round-trip produced specs that compared UNEQUAL to their
+  originals (JSON arrays -> lists vs dataclass tuples). `from_dict` now
+  normalizes every sequence field; 12 regression tests pin save/load/build
+  equality across all six presets.
+
+### Verification
+- Second 10-pass audit with fresh dimensions (install resolution, launch
+  smoke, offline capability, JSON round-trip, dist contents, git health,
+  error-handling sweep, units discipline, README structure, full physics
+  regression) - all green.
+
 ## 1.5.2 — 2026-10-25
 
 ### Release-blocking fix (found by the 10-pass release audit)
